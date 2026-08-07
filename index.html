@@ -512,48 +512,232 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 .lv-warn  { color: var(--warn); }
 .lv-error { color: var(--bad); }
 
-/* ---------- PINゲート ---------- */
+/* ---------- ビュー切り替え（ハッシュルーター） ---------- */
+.view[hidden] { display: none; }
+
+.tabs {
+  order: 3;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 2px;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: .8rem;
+  font-weight: 700;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.tab:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card-2)); }
+.tab[aria-current="page"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.tab svg { flex: none; }
+
+/* ---------- ユーザーチップ / アバター ---------- */
+.avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  flex: none;
+  display: block;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+}
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px 3px 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card-2);
+  min-width: 0;
+}
+.user-chip[hidden] { display: none; }
+.user-chip .who { min-width: 0; line-height: 1.25; }
+.user-chip .who b {
+  display: block;
+  font-size: .78rem;
+  color: var(--fg-strong);
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-chip .who span { display: block; font-family: var(--mono); font-size: .65rem; color: var(--muted); }
+
+/* ---------- 認証ゲート（Discord OAuth2） ---------- */
 .gate {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
+  /* minmax(0,1fr) がないと、内部の nowrap 要素で列幅が画面幅を超える */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   padding: 20px;
   background: var(--bg);
+  overflow-y: auto;
 }
 .gate[hidden] { display: none; }
 .gate-box {
   width: 100%;
-  max-width: 380px;
+  max-width: 430px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 22px 20px;
+  padding: 24px 20px;
   box-shadow: var(--shadow);
   text-align: center;
+  margin: auto;
 }
-.gate-box h2 { font-size: 1.05rem; margin-bottom: 6px; }
+.gate-box h2 { font-size: 1.06rem; margin-bottom: 6px; }
 .gate-box p { color: var(--muted); font-size: .8rem; }
-.pin-input {
-  width: 100%;
-  text-align: center;
-  letter-spacing: .5em;
-  font-family: var(--mono);
-  font-size: 1.3rem;
-  padding: 10px;
-  margin: 10px 0 6px;
-}
-.gate-msg { min-height: 1.4em; font-size: .78rem; font-weight: 700; }
+.gate-panel[hidden] { display: none; }
+.gate-msg { min-height: 1.4em; font-size: .78rem; font-weight: 700; margin-top: 4px; }
 .gate-msg.err { color: var(--bad); }
 .gate-msg.ok { color: var(--ok); }
-.keypad {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 10px 0;
+
+.btn-discord {
+  background: #5865f2;
+  border-color: #5865f2;
+  color: #ffffff;
 }
-.keypad button { min-height: 46px; font-family: var(--mono); font-size: 1rem; }
+.btn-discord:hover { background: #4752c4; border-color: #4752c4; }
+
+.gate-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 2px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+
+/* 認可要求リスト（スコープ表示） */
+.scope-list {
+  list-style: none;
+  margin: 14px 0;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-2);
+  text-align: left;
+  display: grid;
+  gap: 9px;
+  font-size: .78rem;
+}
+.scope-list li { display: flex; gap: 8px; align-items: flex-start; overflow-wrap: anywhere; }
+.scope-list svg { flex: none; margin-top: 3px; }
+
+/* 疑似ブラウザのURLバー（デモ用の認可画面） */
+.fake-url {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-deep);
+  font-family: var(--mono);
+  font-size: .68rem;
+  color: var(--muted);
+  text-align: left;
+  overflow: hidden;
+  max-width: 100%;
+}
+.fake-url span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* アカウント選択ボタン */
+.account-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 8px 12px;
+  min-height: 52px;
+  white-space: normal;
+}
+.account-btn .who { min-width: 0; }
+.account-btn .who b {
+  display: block;
+  font-size: .84rem;
+  color: var(--fg-strong);
+  overflow-wrap: anywhere;
+}
+.account-btn .who span {
+  display: block;
+  font-family: var(--mono);
+  font-size: .68rem;
+  font-weight: 400;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.account-btn + .account-btn { margin-top: 8px; }
+
+/* アクセス拒否表示 */
+.deny {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--bad);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bad) 13%, transparent);
+  text-align: left;
+  font-size: .8rem;
+}
+.deny[hidden] { display: none; }
+.deny b { color: var(--fg-strong); }
+.deny code {
+  font-family: var(--mono);
+  font-size: .74rem;
+  overflow-wrap: anywhere;
+  color: var(--fg-strong);
+}
+
+/* 認証情報の一覧 */
+.kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 12px;
+  font-size: .78rem;
+  margin: 0 0 12px;
+}
+.kv dt { color: var(--muted); font-weight: 700; }
+.kv dd { margin: 0; font-family: var(--mono); color: var(--fg-strong); overflow-wrap: anywhere; }
+
+.session-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-2);
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.session-head .avatar { width: 44px; height: 44px; }
+.session-head .who { min-width: 0; }
+.session-head .who b { display: block; color: var(--fg-strong); font-size: .92rem; overflow-wrap: anywhere; }
+.session-head .who span { display: block; font-family: var(--mono); font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
 
 /* ---------- トースト ---------- */
 .toasts {
@@ -611,30 +795,113 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 </head>
 <body>
 
-<!-- ============ PIN ゲート（フロントエンド完結型の疑似認証） ============ -->
+<!-- ============ 認証ゲート（Discord OAuth2 / 許可制アクセス） ============ -->
 <div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
   <div class="gate-box">
-    <svg width="46" height="46" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="var(--bg-deep)" stroke="var(--line)"></rect>
-      <path d="M9 23V9l14 14V9" fill="none" stroke="var(--accent)" stroke-width="3"
-            stroke-linecap="round" stroke-linejoin="round"></path>
-    </svg>
-    <h2 id="gateTitle">Nevi Web Center</h2>
-    <p id="gateDesc">ローカル疑似認証モードです。PINはこの端末のブラウザ内（LocalStorage）にのみ保存され、外部へは送信されません。</p>
-    <form id="gateForm" autocomplete="off">
-      <label class="sr-only" for="pinField">PINコード</label>
-      <input class="pin-input" id="pinField" type="password" inputmode="numeric"
-             pattern="[0-9]*" maxlength="8" placeholder="••••" aria-describedby="gateDesc">
-      <div class="keypad" id="keypad" aria-label="PIN入力キーパッド"></div>
+
+    <!-- ---- ログイン画面 ---- -->
+    <div class="gate-panel" id="panelLogin">
+      <svg width="46" height="46" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="var(--bg-deep)" stroke="var(--line)"></rect>
+        <path d="M9 23V9l14 14V9" fill="none" stroke="var(--accent)" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <h2 id="gateTitle">Nevi Web Center</h2>
+      <p id="gateDesc">管理者専用ダッシュボードです。許可リストに登録された Discord アカウントだけがログインできます。</p>
+
       <p class="gate-msg" id="gateMsg" role="status" aria-live="polite"></p>
-      <button class="btn btn-primary btn-block" type="submit" id="gateSubmit">解錠する</button>
-    </form>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn btn-sm btn-block" type="button" id="gateSkip">PINなしで続行</button>
-      <button class="btn btn-sm btn-block" type="button" id="gateReset">PINを再設定</button>
+
+      <div class="deny" id="denyBox" hidden>
+        <b>アクセスが拒否されました</b>
+        <span id="denyText">このアカウントは許可リストに登録されていません。</span>
+        <code id="denyId"></code>
+      </div>
+
+      <button class="btn btn-discord btn-block" type="button" id="loginBtn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.3.5c1.7.4 2.6.9 3.5 1.6-1.5-.8-3.1-1.3-5.2-1.3-2.1 0-3.7.5-5.2 1.3.9-.7 1.9-1.2 3.5-1.6L11.5 3a19.4 19.4 0 0 0-4.9 1.4C3.6 8.9 2.8 13.2 3.2 17.5a19.9 19.9 0 0 0 6 3l1.2-1.7c-1-.4-1.9-.9-2.7-1.5l.6-.4a13.9 13.9 0 0 0 11.8 0l.6.4c-.8.6-1.7 1.1-2.7 1.5l1.2 1.7a19.8 19.8 0 0 0 6-3c.5-5-.8-9.2-3.9-13.1zM9.3 15.1c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm5.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"></path>
+        </svg>
+        Discordでログイン
+      </button>
+
+      <p class="gate-mode" id="gateMode">認証モード: 判定中…</p>
+
+      <ul class="scope-list">
+        <li>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.6"></circle><path d="M5 20c0-3.4 3.1-5.4 7-5.4s7 2 7 5.4"></path>
+          </svg>
+          <span>要求スコープは <code>identify</code> のみです。ユーザーID・表示名・アイコンだけを読み取り、メッセージやサーバー情報には一切アクセスしません。</span>
+        </li>
+        <li>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+          </svg>
+          <span>取得したセッションはこの端末のブラウザ内にのみ保存され、有効期限を過ぎると自動的に破棄されます。</span>
+        </li>
+        <li>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3z"></path><path d="m9 12 2 2 4-4"></path>
+          </svg>
+          <span id="gateAllowNote">許可されている Discord ID: —</span>
+        </li>
+      </ul>
+
+      <p style="font-size:.72rem">
+        アクセス要求先: <code id="gateNext">/dashboard</code>
+      </p>
+    </div>
+
+    <!-- ---- 認可画面（デモモードのみ / discord.com の認可画面を模した確認ステップ） ---- -->
+    <div class="gate-panel" id="panelConsent" hidden>
+      <div class="fake-url">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+        </svg>
+        <span id="consentUrl">discord.com/oauth2/authorize?client_id=…&amp;scope=identify</span>
+      </div>
+
+      <h2 style="margin-top:16px">アクセスを許可しますか？</h2>
+      <p><strong>Nevi Web Center</strong> が Discord アカウントの基本情報（<code>identify</code>）へのアクセスを求めています。ログインするアカウントを選んでください。</p>
+
+      <div style="margin:14px 0">
+        <button class="btn account-btn" type="button" id="consentAdmin">
+          <img class="avatar" id="consentAdminAvatar" src="" alt="" width="34" height="34">
+          <span class="who">
+            <b>ご主人さま（管理者アカウント）</b>
+            <span id="consentAdminId">ID: —</span>
+          </span>
+        </button>
+        <button class="btn account-btn" type="button" id="consentGuest">
+          <img class="avatar" id="consentGuestAvatar" src="" alt="" width="34" height="34">
+          <span class="who">
+            <b>ゲストユーザー（許可リスト外）</b>
+            <span id="consentGuestId">ID: 999999999999999999</span>
+          </span>
+        </button>
+      </div>
+
+      <button class="btn btn-sm btn-block" type="button" id="consentCancel">キャンセルして戻る</button>
+      <p style="margin-top:10px;font-size:.72rem">
+        これはデモモードの疑似認可画面です。Client ID を設定すると、実際の discord.com の認可画面へ遷移します。
+      </p>
+    </div>
+
+    <!-- ---- 認証処理中 ---- -->
+    <div class="gate-panel" id="panelPending" hidden>
+      <h2>Discord と通信しています…</h2>
+      <p id="pendingText">アクセストークンを検証し、ユーザー情報を取得しています。</p>
+      <span class="badge badge-run" style="margin-top:10px"><span class="dot"></span>認証処理中</span>
     </div>
   </div>
 </div>
+
+<!-- ============ 認証後に表示されるアプリ本体 ============ -->
+<div id="app" hidden>
 
 <!-- ============ ヘッダ ============ -->
 <header class="topbar">
@@ -653,10 +920,43 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     <div class="topbar-tools">
       <span class="badge badge-run" id="linkBadge"><span class="dot"></span>ローカル監視中</span>
       <span class="clock" id="clock">--:--:--</span>
+      <span class="user-chip" id="userChip">
+        <img class="avatar" id="chipAvatar" src="" alt="" width="30" height="30">
+        <span class="who">
+          <b id="chipName">—</b>
+          <span id="chipId">—</span>
+        </span>
+      </span>
       <button class="btn btn-sm" id="themeBtn" aria-live="polite">テーマ: 自動</button>
       <button class="btn btn-sm btn-danger" id="panicBtn">緊急停止</button>
-      <button class="btn btn-sm" id="lockBtn">ロック</button>
+      <button class="btn btn-sm" id="logoutBtn">ログアウト</button>
     </div>
+
+    <nav class="tabs" id="mainNav" aria-label="メインナビゲーション">
+      <a class="tab" href="#/dashboard" data-route="dashboard">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect>
+          <rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect>
+        </svg>
+        ダッシュボード
+      </a>
+      <a class="tab" href="#/tasks" data-route="tasks">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+        タスクと予定
+      </a>
+      <a class="tab" href="#/console" data-route="console">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="m7 9 3 3-3 3M13 15h4"></path>
+        </svg>
+        コンソールと権限
+      </a>
+    </nav>
   </div>
 </header>
 
@@ -674,10 +974,11 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     <button class="btn btn-sm" id="releaseBtn">緊急停止を解除</button>
   </div>
 
-  <main class="layout">
+  <!-- ================= ビュー: #/dashboard ================= -->
+  <main class="view layout" id="viewDashboard" data-route="dashboard" hidden>
 
-    <!-- ================= 左カラム: ステータス ================= -->
-    <div class="col" id="colStatus">
+    <!-- ----------------- 左カラム: 稼働状況 ----------------- -->
+    <div class="col">
 
       <!-- PCリソース -->
       <section class="card" aria-labelledby="resTitle">
@@ -715,100 +1016,6 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <span>ホスト: nevi-local （要差し替え）</span>
           <span>稼働: <span id="uptime">00:00:00</span></span>
           <span>プロセス: <span id="procCount">—</span></span>
-        </div>
-      </section>
-
-      <!-- タスク自動化 -->
-      <section class="card" aria-labelledby="taskTitle">
-        <div class="card-head">
-          <h2 id="taskTitle">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-            </svg>
-            /task 自動化リスト
-          </h2>
-          <span class="spacer"></span>
-          <button class="btn btn-sm" id="pauseAllBtn">全タスク一時停止</button>
-          <button class="btn btn-sm" id="runAllBtn">待機中を一括実行</button>
-        </div>
-        <div id="taskList"></div>
-
-        <h3 style="font-size:.8rem;letter-spacing:.06em;color:var(--muted);margin-top:16px">実行履歴</h3>
-        <div class="history" id="historyList"></div>
-      </section>
-
-      <!-- Googleカレンダー -->
-      <section class="card" aria-labelledby="calTitle">
-        <div class="card-head">
-          <h2 id="calTitle">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-              <path d="M16 2v4M8 2v4M3 10h18"></path>
-            </svg>
-            Googleカレンダー連携
-          </h2>
-          <span class="spacer"></span>
-          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>疑似同期</span>
-          <button class="btn btn-sm" id="calAddToggle" aria-expanded="false" aria-controls="calForm">予定を追加</button>
-        </div>
-        <p class="card-note">OAuth未接続のため、予定はブラウザ内のみに保存される疑似データです（要差し替え: Google Calendar API連携）。</p>
-
-        <form id="calForm" hidden autocomplete="off"
-              style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--card-2)">
-          <div class="row2">
-            <div class="field">
-              <label for="calDate">日付</label>
-              <input type="date" id="calDate" required>
-            </div>
-            <div class="field">
-              <label for="calTime">開始時刻</label>
-              <input type="time" id="calTime" required>
-            </div>
-          </div>
-          <div class="field">
-            <label for="calTitleInput">タイトル</label>
-            <input type="text" id="calTitleInput" required maxlength="60" placeholder="例: バックアップ結果のレビュー">
-          </div>
-          <div class="field">
-            <label for="calWhere">場所・メモ</label>
-            <input type="text" id="calWhere" maxlength="80" placeholder="例: 自宅デスク / Discord通話">
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" type="submit" id="calSubmit">この内容で登録</button>
-            <button class="btn btn-sm" type="button" id="calCancel">キャンセル</button>
-          </div>
-        </form>
-
-        <div class="cal-list" id="calList"></div>
-      </section>
-    </div>
-
-    <!-- ================= 右カラム: 操作・制御 ================= -->
-    <div class="col" id="colControl">
-
-      <!-- MCP -->
-      <section class="card" aria-labelledby="mcpTitle">
-        <div class="card-head">
-          <h2 id="mcpTitle">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="6" cy="6" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle>
-              <circle cx="12" cy="18" r="2.5"></circle>
-              <path d="M8.5 6h7M7.4 8.1 10.6 16M16.6 8.1 13.4 16"></path>
-            </svg>
-            MCP接続ステータス
-          </h2>
-          <span class="spacer"></span>
-          <span class="badge" id="mcpBadge"><span class="dot"></span>—</span>
-        </div>
-        <div id="mcpList"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <button class="btn btn-sm" id="mcpAllOn">すべて接続</button>
-          <button class="btn btn-sm" id="mcpAllOff">すべて切断</button>
-          <button class="btn btn-sm" id="mcpPing">全サーバへPing</button>
         </div>
       </section>
 
@@ -861,6 +1068,156 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <textarea id="specPrompt" rows="12" spellcheck="false"
                   placeholder="「調査・修正プロンプトを生成」を押すと、直近のエラーログを埋め込んだ依頼文がここに出力されます。"></textarea>
       </section>
+    </div>
+
+    <!-- ----------------- 右カラム: 接続と診断 ----------------- -->
+    <div class="col">
+
+      <!-- MCP -->
+      <section class="card" aria-labelledby="mcpTitle">
+        <div class="card-head">
+          <h2 id="mcpTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="6" cy="6" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle>
+              <circle cx="12" cy="18" r="2.5"></circle>
+              <path d="M8.5 6h7M7.4 8.1 10.6 16M16.6 8.1 13.4 16"></path>
+            </svg>
+            MCP接続ステータス
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge" id="mcpBadge"><span class="dot"></span>—</span>
+        </div>
+        <div id="mcpList"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn btn-sm" id="mcpAllOn">すべて接続</button>
+          <button class="btn btn-sm" id="mcpAllOff">すべて切断</button>
+          <button class="btn btn-sm" id="mcpPing">全サーバへPing</button>
+        </div>
+      </section>
+
+      <!-- 認証状態のサマリ -->
+      <section class="card" aria-labelledby="guardTitle">
+        <div class="card-head">
+          <h2 id="guardTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3z"></path><path d="m9 12 2 2 4-4"></path>
+            </svg>
+            アクセスガードの状態
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge badge-ok" id="guardBadge"><span class="dot"></span>保護中</span>
+        </div>
+        <p class="card-note">このダッシュボードの全ルートは Discord OAuth2 の認証と許可IDの照合を通過しないと表示されません。</p>
+
+        <div class="session-head">
+          <img class="avatar" id="guardAvatar" src="" alt="" width="44" height="44">
+          <span class="who">
+            <b id="guardName">—</b>
+            <span id="guardHandle">—</span>
+          </span>
+        </div>
+
+        <dl class="kv">
+          <dt>保護ルート</dt><dd>/dashboard, /tasks, /console</dd>
+          <dt>認証方式</dt><dd id="guardMode">—</dd>
+          <dt>許可ID数</dt><dd id="guardAllow">—</dd>
+          <dt>セッション期限</dt><dd id="guardExp">—</dd>
+        </dl>
+
+        <p class="card-note" style="margin:0">
+          許可IDや Client ID の変更は「コンソールと権限」タブのアクセス制御カードから行えます。
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <!-- ================= ビュー: #/tasks ================= -->
+  <main class="view layout" id="viewTasks" data-route="tasks" hidden>
+
+    <!-- ----------------- 左カラム: 自動化タスク ----------------- -->
+    <div class="col">
+
+      <!-- タスク自動化 -->
+      <section class="card" aria-labelledby="taskTitle">
+        <div class="card-head">
+          <h2 id="taskTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            /task 自動化リスト
+          </h2>
+          <span class="spacer"></span>
+          <button class="btn btn-sm" id="pauseAllBtn">全タスク一時停止</button>
+          <button class="btn btn-sm" id="runAllBtn">待機中を一括実行</button>
+        </div>
+        <p class="card-note">この一覧の実行・停止は、認証済みの管理者アカウントだけが操作できます。操作内容は統合イベントログに実行者IDとともに記録されます。</p>
+        <div id="taskList"></div>
+
+        <h3 style="font-size:.8rem;letter-spacing:.06em;color:var(--muted);margin-top:16px">実行履歴</h3>
+        <div class="history" id="historyList"></div>
+      </section>
+    </div>
+
+    <!-- ----------------- 右カラム: 予定 ----------------- -->
+    <div class="col">
+
+      <!-- Googleカレンダー -->
+      <section class="card" aria-labelledby="calTitle">
+        <div class="card-head">
+          <h2 id="calTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+              <path d="M16 2v4M8 2v4M3 10h18"></path>
+            </svg>
+            Googleカレンダー連携
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>疑似同期</span>
+          <button class="btn btn-sm" id="calAddToggle" aria-expanded="false" aria-controls="calForm">予定を追加</button>
+        </div>
+        <p class="card-note">OAuth未接続のため、予定はブラウザ内のみに保存される疑似データです（要差し替え: Google Calendar API連携）。</p>
+
+        <form id="calForm" hidden autocomplete="off"
+              style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--card-2)">
+          <div class="row2">
+            <div class="field">
+              <label for="calDate">日付</label>
+              <input type="date" id="calDate" required>
+            </div>
+            <div class="field">
+              <label for="calTime">開始時刻</label>
+              <input type="time" id="calTime" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="calTitleInput">タイトル</label>
+            <input type="text" id="calTitleInput" required maxlength="60" placeholder="例: バックアップ結果のレビュー">
+          </div>
+          <div class="field">
+            <label for="calWhere">場所・メモ</label>
+            <input type="text" id="calWhere" maxlength="80" placeholder="例: 自宅デスク / Discord通話">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" type="submit" id="calSubmit">この内容で登録</button>
+            <button class="btn btn-sm" type="button" id="calCancel">キャンセル</button>
+          </div>
+        </form>
+
+        <div class="cal-list" id="calList"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ================= ビュー: #/console ================= -->
+  <main class="view layout" id="viewConsole" data-route="console" hidden>
+
+    <!-- ----------------- 左カラム: 送信シミュレータ ----------------- -->
+    <div class="col">
 
       <!-- REST API / Webhook -->
       <section class="card" aria-labelledby="apiTitle">
@@ -931,6 +1288,67 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <h3 style="font-size:.78rem;color:var(--muted);letter-spacing:.06em;margin:14px 0 6px">レスポンス</h3>
         <pre class="code-out" id="apiOut">まだ送信していません。</pre>
       </section>
+    </div>
+
+    <!-- ----------------- 右カラム: 権限と設定 ----------------- -->
+    <div class="col">
+
+      <!-- アクセス制御（Discord OAuth2） -->
+      <section class="card" aria-labelledby="authTitle">
+        <div class="card-head">
+          <h2 id="authTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.6"></circle><path d="M5 20c0-3.4 3.1-5.4 7-5.4s7 2 7 5.4"></path>
+            </svg>
+            アクセス制御（Discord OAuth2）
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge badge-ok" id="authBadge"><span class="dot"></span>認証済み</span>
+        </div>
+
+        <div class="session-head">
+          <img class="avatar" id="authAvatar" src="" alt="" width="44" height="44">
+          <span class="who">
+            <b id="authName">—</b>
+            <span id="authHandle">—</span>
+          </span>
+        </div>
+
+        <dl class="kv">
+          <dt>Discord ID</dt><dd id="authId">—</dd>
+          <dt>認証モード</dt><dd id="authMode">—</dd>
+          <dt>スコープ</dt><dd>identify</dd>
+          <dt>セッション期限</dt><dd id="authExp">—</dd>
+        </dl>
+
+        <div class="field">
+          <label for="setClientId">Discord アプリケーションの Client ID</label>
+          <div class="inline-input">
+            <input type="password" id="setClientId" inputmode="numeric" spellcheck="false"
+                   placeholder="未設定（デモモードで動作中）">
+            <button class="btn btn-sm" type="button" data-mask-toggle="setClientId" aria-pressed="false">表示</button>
+          </div>
+          <span class="hint">設定すると discord.com の認可画面（Implicit Grant / <code>response_type=token</code>）へ実際に遷移します。静的サイトのためクライアントシークレットは使いません。</span>
+        </div>
+
+        <div class="field">
+          <label for="redirectUri">リダイレクトURI（Discord Developer Portal に登録する値）</label>
+          <input type="text" id="redirectUri" readonly spellcheck="false">
+        </div>
+
+        <div class="field">
+          <label for="setAllowIds">許可する Discord ユーザーID（ホワイトリスト / 改行・カンマ区切り）</label>
+          <textarea id="setAllowIds" rows="3" spellcheck="false"
+                    placeholder="000000000000000000"></textarea>
+          <span class="hint">ここに無いIDでログインした場合は、ユーザー情報の取得直後にセッションを破棄してアクセスを拒否します（要差し替え: ご主人さまの実IDを設定）。</span>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="saveAuthSettings">認証設定を保存</button>
+          <button class="btn btn-sm btn-danger" id="logoutBtn2">このセッションを破棄</button>
+        </div>
+      </section>
 
       <!-- 設定・セキュリティ -->
       <section class="card" aria-labelledby="secTitle">
@@ -944,15 +1362,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
             設定とローカルセキュリティ
           </h2>
         </div>
-        <p class="card-note">入力値はこのブラウザの LocalStorage にのみ保存されます。共用PCでは作業後に「保存データを全消去」を実行してください。</p>
+        <p class="card-note">入力値はこのブラウザの LocalStorage にのみ保存されます。共用PCでは作業後に「保存データを全消去」を実行してください（認証セッションも同時に破棄されます）。</p>
 
-        <div class="field">
-          <label for="setPin">PINコード（4〜8桁の数字）</label>
-          <div class="inline-input">
-            <input type="password" id="setPin" inputmode="numeric" maxlength="8" placeholder="未設定">
-            <button class="btn btn-sm" type="button" data-mask-toggle="setPin" aria-pressed="false">表示</button>
-          </div>
-        </div>
         <div class="field">
           <label for="setPoll">リソース更新間隔（ミリ秒）</label>
           <input type="number" id="setPoll" min="500" max="10000" step="500" value="2000">
@@ -995,11 +1406,12 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   </section>
 
   <footer class="foot">
-    <span>Nevi Web Center — 完全ローカル動作（外部通信ゼロ / 外部CDN・Webフォント不使用）</span>
-    <span>状態管理: LocalStorage + CustomEvent</span>
+    <span>Nevi Web Center — 単一HTML完結（外部CDN・Webフォント不使用）</span>
+    <span>認証: Discord OAuth2 / identify + 許可ID制</span>
     <span id="footNote">表示データはすべてローカル生成のデモ値です（要差し替え）</span>
   </footer>
 </div>
+</div><!-- /#app -->
 
 <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
@@ -1039,8 +1451,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         mcp: state.mcp,
         events: state.events,
         history: state.history,
-        theme: state.theme,
-        unlocked: state.unlocked
+        theme: state.theme
       }));
       return true;
     } catch (e) {
@@ -1067,10 +1478,17 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
   var state = {
     booted: Date.now(),
-    unlocked: false,
     emergency: false,
     theme: "auto",
-    settings: { pin: "", poll: 2000, apiUrl: "http://127.0.0.1:8787/nevi/command", apiToken: "", specTimeout: 45 },
+    settings: {
+      poll: 2000,
+      apiUrl: "http://127.0.0.1:8787/nevi/command",
+      apiToken: "",
+      specTimeout: 45,
+      /* Discord OAuth2 設定。Client ID 未設定のときはデモモードで動作する */
+      clientId: "",
+      allowIds: "000000000000000000"
+    },
     res: { cpu: 22, mem: 46, disk: 63, procs: 184 },
     cpuHist: [],
     tasks: [
@@ -1123,7 +1541,6 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     if (Array.isArray(saved.history) && saved.history.length) state.history = saved.history;
     if (Array.isArray(saved.events)) state.events = saved.events.slice(-200);
     if (saved.theme) state.theme = saved.theme;
-    state.unlocked = !!saved.unlocked;
   })();
 
   /* ==========================================================
@@ -1191,97 +1608,478 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   });
 
   /* ==========================================================
-     PINゲート（フロントエンド完結型の疑似認証）
-     ========================================================== */
-  var gate = $("#gate");
-  var pinField = $("#pinField");
-  var gateMsg = $("#gateMsg");
-  var settingMode = false;
+     Discord OAuth2 認証（許可リスト制のアクセスガード）
 
-  (function buildKeypad() {
-    var keys = ["1","2","3","4","5","6","7","8","9","C","0","←"];
-    var frag = document.createDocumentFragment();
-    keys.forEach(function (k) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "btn btn-sm";
-      b.textContent = k;
-      b.addEventListener("click", function () {
-        if (k === "C") pinField.value = "";
-        else if (k === "←") pinField.value = pinField.value.slice(0, -1);
-        else if (pinField.value.length < 8) pinField.value += k;
-        pinField.focus();
-      });
-      frag.appendChild(b);
-    });
-    $("#keypad").appendChild(frag);
+     静的サイトのためクライアントシークレットを持てない。よって
+     Implicit Grant（response_type=token）で identify スコープのみを
+     取得し、users/@me のユーザーIDを許可リストと突き合わせる。
+     Client ID 未設定時は外部通信なしのデモモードで同じ流れを再現する。
+     ========================================================== */
+  var AUTH_KEY = "nevi.webcenter.auth.v1";
+  var OAUTH_STATE_KEY = "nevi.webcenter.oauth.state";
+  var OAUTH_NEXT_KEY = "nevi.webcenter.oauth.next";
+  var AUTHORIZE_URL = "https://discord.com/api/oauth2/authorize";
+  var USERINFO_URL = "https://discord.com/api/users/@me";
+  var DEMO_SESSION_MS = 60 * 60 * 1000;
+  var GUEST_ID = "999999999999999999";
+
+  var auth = { user: null, mode: null, expires: 0 };
+  var pendingRoute = "";
+  var oauthBusy = false;
+
+  var gate = $("#gate");
+  var gateMsg = $("#gateMsg");
+
+  function allowList() {
+    return String(state.settings.allowIds || "")
+      .split(/[\s,]+/)
+      .filter(function (v) { return /^\d{5,25}$/.test(v); });
+  }
+  function isAllowed(id) { return allowList().indexOf(String(id)) >= 0; }
+  function isAuthed() { return !!(auth.user && auth.expires > Date.now() && isAllowed(auth.user.id)); }
+  function realMode() { return /^\d{5,25}$/.test(String(state.settings.clientId || "").trim()); }
+  function modeLabel(m) { return m === "discord" ? "Discord 実接続 (Implicit Grant)" : "デモモード（外部通信なし）"; }
+  function displayName(u) { return (u && (u.global_name || u.username)) || "不明なユーザー"; }
+
+  /* アイコン: 外部画像を使わずローカルSVGで生成（実接続時のみ Discord CDN を試行） */
+  function localAvatar(u) {
+    var seed = String((u && u.id) || "0");
+    var hue = 0;
+    for (var i = 0; i < seed.length; i++) hue = (hue * 31 + seed.charCodeAt(i)) % 360;
+    var initial = esc(displayName(u).trim().charAt(0).toUpperCase() || "?");
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<rect width="64" height="64" rx="32" fill="hsl(' + hue + ', 46%, 34%)"/>' +
+      '<text x="32" y="43" text-anchor="middle" font-family="system-ui, sans-serif" ' +
+      'font-size="30" font-weight="700" fill="#ffffff">' + initial + '</text></svg>';
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
+  function avatarUri(u) {
+    if (u && u.avatar && !u.demo) {
+      return "https://cdn.discordapp.com/avatars/" +
+        encodeURIComponent(u.id) + "/" + encodeURIComponent(u.avatar) + ".png?size=64";
+    }
+    return localAvatar(u);
+  }
+
+  /* ---------- セッションの保存・復元 ---------- */
+  function saveAuth() {
+    try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch (e) { /* 保存不可環境では揮発 */ }
+  }
+  function clearAuth() {
+    auth = { user: null, mode: null, expires: 0 };
+    try { localStorage.removeItem(AUTH_KEY); } catch (e) { /* 同上 */ }
+  }
+  (function restoreAuth() {
+    try {
+      var raw = localStorage.getItem(AUTH_KEY);
+      if (!raw) return;
+      var a = JSON.parse(raw);
+      if (a && a.user && a.expires > Date.now()) auth = a;
+      else localStorage.removeItem(AUTH_KEY);
+    } catch (e) { /* 壊れた値は無視 */ }
   })();
 
-  function showGate() {
-    settingMode = !state.settings.pin;
+  /* ---------- ゲートの表示制御 ---------- */
+  function showPanel(which) {
+    $("#panelLogin").hidden = which !== "login";
+    $("#panelConsent").hidden = which !== "consent";
+    $("#panelPending").hidden = which !== "pending";
+  }
+
+  function showGate(panel) {
+    panel = panel || "login";
     gate.hidden = false;
+    $("#app").hidden = true;
     document.body.style.overflow = "hidden";
-    pinField.value = "";
-    gateMsg.className = "gate-msg";
-    gateMsg.textContent = settingMode ? "初回アクセスです。4〜8桁のPINを設定してください。" : "";
-    $("#gateSubmit").textContent = settingMode ? "このPINで設定する" : "解錠する";
-    $("#gateReset").hidden = settingMode;
-    setTimeout(function () { pinField.focus(); }, 30);
+    showPanel(panel);
+
+    var ids = allowList();
+    $("#gateNext").textContent = pendingRoute || "/dashboard";
+    $("#gateMode").textContent = realMode()
+      ? "認証モード: Discord 実接続（Client ID 設定済み）"
+      : "認証モード: デモ（Client ID 未設定 / 外部通信なし）";
+    $("#gateAllowNote").textContent = "許可されている Discord ID: " +
+      (ids.length ? ids.join(" / ") : "（未設定のため誰もログインできません）");
+    $("#consentAdminId").textContent = "ID: " + (ids[0] || "—");
+    $("#consentAdminAvatar").src = localAvatar({ id: ids[0] || "0", global_name: "ご主人さま" });
+    $("#consentGuestAvatar").src = localAvatar({ id: GUEST_ID, global_name: "ゲストユーザー" });
+
+    if (panel === "login") setTimeout(function () { if (!gate.hidden) $("#loginBtn").focus(); }, 30);
   }
   function hideGate() {
     gate.hidden = true;
+    $("#app").hidden = false;
     document.body.style.overflow = "";
   }
 
-  $("#gateForm").addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    var v = pinField.value.trim();
-    if (settingMode) {
-      if (!/^\d{4,8}$/.test(v)) {
-        gateMsg.className = "gate-msg err";
-        gateMsg.textContent = "4〜8桁の数字で入力してください。";
-        return;
-      }
-      state.settings.pin = v;
-      state.unlocked = true;
-      persist();
-      hideGate();
-      log("ok", "PINを設定し、ローカル疑似認証を有効化しました。");
-      toast("PINを設定しました", "ok");
-      syncSettingsInputs();
+  function showDeny(u) {
+    $("#denyBox").hidden = false;
+    $("#denyText").textContent = displayName(u) +
+      " さんのアカウントは、このダッシュボードの許可リストに登録されていません。管理者に許可IDの追加を依頼してください。";
+    $("#denyId").textContent = "拒否された Discord ID: " + u.id;
+  }
+  function clearDeny() { $("#denyBox").hidden = true; }
+
+  /* ---------- ログイン開始 ---------- */
+  function redirectUri() {
+    return (location.origin && location.origin !== "null")
+      ? location.origin + location.pathname
+      : location.href.split("#")[0];
+  }
+  function randomState() {
+    var a = new Uint8Array(16);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a);
+    else for (var i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256);
+    return Array.prototype.map.call(a, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+  }
+
+  function startRealLogin() {
+    var nonce = randomState();
+    try {
+      sessionStorage.setItem(OAUTH_STATE_KEY, nonce);
+      sessionStorage.setItem(OAUTH_NEXT_KEY, pendingRoute || "/dashboard");
+    } catch (e) { /* sessionStorage 不可でも認可自体は続行する */ }
+    var url = AUTHORIZE_URL +
+      "?client_id=" + encodeURIComponent(String(state.settings.clientId).trim()) +
+      "&response_type=token&scope=identify&prompt=consent" +
+      "&state=" + nonce +
+      "&redirect_uri=" + encodeURIComponent(redirectUri());
+    log("info", "Discord の認可画面へ遷移します（scope=identify）。");
+    showGate("pending");
+    $("#pendingText").textContent = "discord.com の認可画面へリダイレクトしています…";
+    location.href = url;
+  }
+
+  function demoLogin(kind) {
+    showPanel("pending");
+    $("#pendingText").textContent = "アクセストークンを検証し、ユーザー情報を取得しています（デモ）。";
+    var u = kind === "admin"
+      ? { id: allowList()[0] || "0", username: "nevi.master", global_name: "ご主人さま", avatar: null, demo: true }
+      : { id: GUEST_ID, username: "guest.user", global_name: "ゲストユーザー", avatar: null, demo: true };
+    setTimeout(function () { finishLogin(u, "demo", Date.now() + DEMO_SESSION_MS); }, 480);
+  }
+
+  $("#loginBtn").addEventListener("click", function () {
+    clearDeny();
+    gateMsg.className = "gate-msg";
+    gateMsg.textContent = "";
+    if (!allowList().length) {
+      gateMsg.className = "gate-msg err";
+      gateMsg.textContent = "許可リストが空です。先に許可する Discord ユーザーIDを設定してください。";
+      log("error", "許可リストが空のためログインを開始できません。");
       return;
     }
-    if (v === state.settings.pin) {
-      state.unlocked = true;
-      persist();
-      hideGate();
-      log("ok", "PIN認証に成功しました。");
-      toast("解錠しました", "ok");
-    } else {
-      gateMsg.className = "gate-msg err";
-      gateMsg.textContent = "PINが一致しません。";
-      pinField.value = "";
-      log("warn", "PIN認証に失敗しました。");
-    }
+    if (realMode()) { startRealLogin(); return; }
+    $("#consentUrl").textContent =
+      "discord.com/oauth2/authorize?client_id=（デモ）&response_type=token&scope=identify";
+    showPanel("consent");
+    log("info", "Discord の認可画面を開きました（デモモード / scope=identify）。");
   });
 
-  $("#gateSkip").addEventListener("click", function () {
-    state.unlocked = true;
-    persist();
+  $("#consentAdmin").addEventListener("click", function () { demoLogin("admin"); });
+  $("#consentGuest").addEventListener("click", function () { demoLogin("guest"); });
+  $("#consentCancel").addEventListener("click", function () {
+    showPanel("login");
+    log("warn", "認可をキャンセルしました。ログインしていません。");
+  });
+
+  /* ---------- 認証の確定 / 拒否 ---------- */
+  function finishLogin(user, mode, expires) {
+    if (!isAllowed(user.id)) {
+      clearAuth();
+      renderIdentity();
+      showGate("login");
+      showDeny(user);
+      gateMsg.className = "gate-msg err";
+      gateMsg.textContent = "許可されていないアカウントです。";
+      log("error", "アクセス拒否: " + displayName(user) + "（ID: " + user.id + "）は許可リストにありません。");
+      toast("アクセスが拒否されました", "bad");
+      return;
+    }
+    auth = { user: user, mode: mode, expires: expires };
+    saveAuth();
+    clearDeny();
+    gateMsg.className = "gate-msg";
+    gateMsg.textContent = "";
+    renderIdentity();
+    log("ok", "Discord OAuth2 認証に成功しました: " + displayName(user) +
+      "（ID: " + user.id + " / " + modeLabel(mode) + "）");
+    toast(displayName(user) + " としてログインしました", "ok");
+    var next = pendingRoute || "/dashboard";
+    pendingRoute = "";
     hideGate();
-    log("warn", "PINなしのローカル疑似認証で続行しました。");
+    setHash(next, true);
+  }
+
+  function logout(reason, level) {
+    var was = auth.user;
+    clearAuth();
+    renderIdentity();
+    if (was) log(level || "info", "ログアウトしました: " + displayName(was) + "（理由: " + reason + "）");
+    pendingRoute = "";
+    setHash("/login", true);
+    showGate("login");
+  }
+
+  $("#logoutBtn").addEventListener("click", function () {
+    if (!auth.user) return;
+    logout("ユーザー操作");
+    toast("ログアウトしました");
   });
-  $("#gateReset").addEventListener("click", function () {
-    state.settings.pin = "";
-    persist();
-    showGate();
-    log("warn", "PINを消去しました。再設定してください。");
+  $("#logoutBtn2").addEventListener("click", function () {
+    if (!auth.user) return;
+    logout("セッション破棄の操作", "warn");
+    toast("セッションを破棄しました", "bad");
   });
-  $("#lockBtn").addEventListener("click", function () {
-    state.unlocked = false;
+
+  /* ---------- 認証状態の描画 ---------- */
+  function expiryLabel() {
+    var left = Math.max(0, auth.expires - Date.now());
+    var mins = Math.floor(left / 60000);
+    var label = mins >= 60 ? Math.floor(mins / 60) + "時間" + (mins % 60) + "分" : mins + "分";
+    return new Date(auth.expires).toLocaleString("ja-JP") + "（残り " + label + "）";
+  }
+
+  function renderIdentity() {
+    var chip = $("#userChip");
+    var blank = localAvatar({ id: "0", global_name: "?" });
+
+    $("#guardAllow").textContent = allowList().length + " 件";
+
+    if (!auth.user) {
+      chip.hidden = true;
+      $("#authAvatar").src = blank;
+      $("#authAvatar").alt = "";
+      $("#authName").textContent = "—";
+      $("#authHandle").textContent = "未ログイン";
+      $("#authId").textContent = "—";
+      $("#authMode").textContent = realMode() ? "Discord 実接続 (Implicit Grant)" : "デモモード（外部通信なし）";
+      $("#authExp").textContent = "—";
+      $("#authBadge").className = "badge badge-idle";
+      $("#authBadge").innerHTML = '<span class="dot"></span>未認証';
+
+      $("#guardAvatar").src = blank;
+      $("#guardAvatar").alt = "";
+      $("#guardName").textContent = "—";
+      $("#guardHandle").textContent = "未ログイン";
+      $("#guardMode").textContent = realMode() ? "Discord OAuth2（実接続）" : "Discord OAuth2（デモ）";
+      $("#guardExp").textContent = "—";
+      return;
+    }
+
+    var u = auth.user;
+    var name = displayName(u);
+    var icon = avatarUri(u);
+    var handle = "@" + (u.username || "unknown");
+
+    chip.hidden = false;
+    $("#chipAvatar").src = icon;
+    $("#chipAvatar").alt = name + " のDiscordアイコン";
+    $("#chipName").textContent = name;
+    $("#chipId").textContent = "ID: " + u.id;
+
+    $("#authAvatar").src = icon;
+    $("#authAvatar").alt = name + " のDiscordアイコン";
+    $("#authName").textContent = name;
+    $("#authHandle").textContent = handle;
+    $("#authId").textContent = u.id;
+    $("#authMode").textContent = modeLabel(auth.mode);
+    $("#authExp").textContent = expiryLabel();
+    $("#authBadge").className = "badge badge-ok";
+    $("#authBadge").innerHTML = '<span class="dot"></span>認証済み（管理者）';
+
+    $("#guardAvatar").src = icon;
+    $("#guardAvatar").alt = name + " のDiscordアイコン";
+    $("#guardName").textContent = name;
+    $("#guardHandle").textContent = handle + " / ID: " + u.id;
+    $("#guardMode").textContent = modeLabel(auth.mode);
+    $("#guardExp").textContent = expiryLabel();
+  }
+
+  /* Discord CDN のアイコンが取得できない場合はローカル生成アイコンへ退避 */
+  ["#chipAvatar", "#authAvatar", "#guardAvatar"].forEach(function (sel) {
+    $(sel).addEventListener("error", function () {
+      var fallback = localAvatar(auth.user || { id: "0" });
+      if (this.getAttribute("src") !== fallback) this.src = fallback;
+    });
+  });
+
+  /* ---------- ハッシュルーター + アクセスガード ---------- */
+  var VIEWS = { dashboard: "#viewDashboard", tasks: "#viewTasks", "console": "#viewConsole" };
+  var ROUTE_LABEL = { dashboard: "ダッシュボード", tasks: "タスクと予定", "console": "コンソールと権限" };
+
+  function currentRoute() {
+    return String(location.hash || "").replace(/^#\/?/, "").split(/[?&]/)[0].toLowerCase();
+  }
+  function setHash(path, replace) {
+    var target = "#" + String(path).replace(/^#/, "");
+    if (location.hash === target) { router(); return; }
+    if (replace) {
+      try { location.replace(location.pathname + location.search + target); return; }
+      catch (e) { /* file:// などで失敗したら通常遷移にする */ }
+    }
+    location.hash = target;
+  }
+  function showView(route) {
+    Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k]).hidden = k !== route; });
+    $$("#mainNav .tab").forEach(function (a) {
+      if (a.getAttribute("data-route") === route) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    });
+    document.title = ROUTE_LABEL[route] + " — Nevi Web Center";
+  }
+
+  function router() {
+    if (oauthBusy) return;
+    var r = currentRoute();
+
+    if (!r) { setHash("/dashboard", true); return; }
+
+    if (r === "login") {
+      if (isAuthed()) {
+        var next = pendingRoute || "/dashboard";
+        pendingRoute = "";
+        hideGate();
+        setHash(next, true);
+        return;
+      }
+      showGate("login");
+      return;
+    }
+
+    if (!VIEWS[r]) {
+      log("warn", "存在しないルート #/" + r + " が指定されたため、ダッシュボードへ戻しました。");
+      setHash("/dashboard", true);
+      return;
+    }
+
+    /* ガード: 未ログイン・権限なしはログイン画面へリダイレクトする */
+    if (!isAuthed()) {
+      pendingRoute = "/" + r;
+      log("warn", "未認証のため /" + r + " へのアクセスを拒否し、ログイン画面へリダイレクトしました。");
+      setHash("/login", true);
+      return;
+    }
+
+    hideGate();
+    showView(r);
+  }
+  window.addEventListener("hashchange", router);
+
+  /* ---------- Implicit Grant のコールバック処理 ---------- */
+  function parseFragment(raw) {
+    var out = {};
+    raw.split("&").forEach(function (kv) {
+      var i = kv.indexOf("=");
+      if (i > 0) {
+        out[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, " "));
+      }
+    });
+    return out;
+  }
+
+  function stripFragment() {
+    try { history.replaceState(null, "", location.pathname + location.search + "#/login"); }
+    catch (e) { location.hash = "#/login"; }
+  }
+
+  function consumeOAuthCallback() {
+    var raw = String(location.hash || "").replace(/^#/, "");
+    if (raw.indexOf("access_token=") < 0 && raw.indexOf("error=") < 0) return false;
+
+    oauthBusy = true;
+    var p = parseFragment(raw);
+    var expected = "";
+    try {
+      expected = sessionStorage.getItem(OAUTH_STATE_KEY) || "";
+      pendingRoute = sessionStorage.getItem(OAUTH_NEXT_KEY) || "";
+      sessionStorage.removeItem(OAUTH_STATE_KEY);
+      sessionStorage.removeItem(OAUTH_NEXT_KEY);
+    } catch (e) { /* 参照できない場合は state 検証をスキップしない（下で失敗扱い） */ }
+
+    stripFragment();               // アクセストークンをURLから即座に取り除く
+    showGate("pending");
+
+    function fail(msg, lv) {
+      oauthBusy = false;
+      showGate("login");
+      gateMsg.className = "gate-msg err";
+      gateMsg.textContent = msg;
+      log(lv || "error", msg);
+      toast("ログインに失敗しました", "bad");
+    }
+
+    if (p.error) {
+      fail("Discord 側で認可が拒否されました: " + p.error + (p.error_description ? "（" + p.error_description + "）" : ""), "warn");
+      return true;
+    }
+    if (!p.access_token) { fail("アクセストークンを受け取れませんでした。"); return true; }
+    if (!expected || p.state !== expected) {
+      fail("state パラメータが一致しないため、認証を中断しました（CSRF 対策）。");
+      return true;
+    }
+    if (!window.fetch) { fail("このブラウザは fetch に対応していないため、ユーザー情報を取得できません。"); return true; }
+
+    fetch(USERINFO_URL, {
+      headers: { Authorization: (p.token_type || "Bearer") + " " + p.access_token }
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }).then(function (u) {
+      var ttl = (parseInt(p.expires_in, 10) || 604800) * 1000;
+      oauthBusy = false;
+      finishLogin({
+        id: String(u.id),
+        username: u.username,
+        global_name: u.global_name,
+        avatar: u.avatar
+      }, "discord", Date.now() + ttl);
+    })["catch"](function (err) {
+      fail("Discord ユーザー情報の取得に失敗しました: " + err.message);
+    });
+
+    return true;
+  }
+
+  /* セッション期限の監視（期限切れは自動ログアウト） */
+  setInterval(function () {
+    if (!auth.user) return;
+    if (auth.expires <= Date.now()) {
+      toast("セッションの有効期限が切れました", "bad");
+      logout("有効期限切れ", "warn");
+      return;
+    }
+    if (!$("#viewConsole").hidden) $("#authExp").textContent = expiryLabel();
+    if (!$("#viewDashboard").hidden) $("#guardExp").textContent = expiryLabel();
+  }, 15000);
+
+  /* ---------- 認証設定 ---------- */
+  $("#saveAuthSettings").addEventListener("click", function () {
+    var cid = $("#setClientId").value.trim();
+    if (cid && !/^\d{5,25}$/.test(cid)) {
+      toast("Client ID は数字のみで入力してください", "bad");
+      return;
+    }
+    var ids = $("#setAllowIds").value.split(/[\s,]+/).filter(Boolean);
+    var invalid = ids.filter(function (v) { return !/^\d{5,25}$/.test(v); });
+    if (invalid.length) {
+      toast("Discord ユーザーIDは数字のみです: " + invalid[0], "bad");
+      return;
+    }
+    state.settings.clientId = cid;
+    state.settings.allowIds = ids.join("\n");
     persist();
-    showGate();
-    log("info", "画面をロックしました。");
+    syncSettingsInputs();
+    log("ok", "認証設定を保存しました（許可ID " + ids.length + "件 / " +
+      (realMode() ? "Discord 実接続" : "デモモード") + "）。");
+    toast("認証設定を保存しました", "ok");
+
+    if (auth.user && !isAllowed(auth.user.id)) {
+      log("error", "現在のログインユーザーが許可リストから外れたため、セッションを破棄しました。");
+      logout("許可リストからの除外", "error");
+      return;
+    }
+    renderIdentity();
   });
 
   /* ==========================================================
@@ -2040,7 +2838,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
      設定・セキュリティ
      ========================================================== */
   function syncSettingsInputs() {
-    $("#setPin").value = state.settings.pin;
+    $("#setClientId").value = state.settings.clientId;
+    $("#setAllowIds").value = allowList().join("\n");
+    $("#redirectUri").value = redirectUri();
     $("#setPoll").value = state.settings.poll;
     $("#apiUrl").value = state.settings.apiUrl;
     $("#apiToken").value = state.settings.apiToken;
@@ -2054,12 +2854,6 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   }
 
   $("#saveSettings").addEventListener("click", function () {
-    var pin = $("#setPin").value.trim();
-    if (pin && !/^\d{4,8}$/.test(pin)) {
-      toast("PINは4〜8桁の数字で入力してください", "bad");
-      return;
-    }
-    state.settings.pin = pin;
     state.settings.poll = clamp(parseInt($("#setPoll").value, 10) || 2000, 500, 10000);
     state.settings.apiUrl = $("#apiUrl").value.trim();
     state.settings.apiToken = $("#apiToken").value.trim();
@@ -2074,7 +2868,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
   $("#exportSettings").addEventListener("click", function () {
     var view = {
-      pin: state.settings.pin ? maskify(state.settings.pin) : "(未設定)",
+      discord_client_id: state.settings.clientId ? maskify(state.settings.clientId) : "(未設定 / デモモード)",
+      allowed_discord_ids: allowList(),
+      signed_in_as: auth.user ? displayName(auth.user) + " (" + auth.user.id + ")" : "(未ログイン)",
       poll_ms: state.settings.poll,
       api_url: maskify(state.settings.apiUrl),
       api_token: state.settings.apiToken ? maskify(state.settings.apiToken) : "(未設定)",
@@ -2089,13 +2885,19 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
   $("#clearAll").addEventListener("click", function () {
     try { localStorage.removeItem(LS_KEY); } catch (e) { /* 保存不可環境では無視 */ }
-    state.settings = { pin: "", poll: 2000, apiUrl: "http://127.0.0.1:8787/nevi/command", apiToken: "", specTimeout: 45 };
-    state.unlocked = false;
+    state.settings = {
+      poll: 2000,
+      apiUrl: "http://127.0.0.1:8787/nevi/command",
+      apiToken: "",
+      specTimeout: 45,
+      clientId: "",
+      allowIds: "000000000000000000"
+    };
     syncSettingsInputs();
     restartResTimer();
-    log("warn", "LocalStorage の保存データをすべて消去しました。");
+    log("warn", "LocalStorage の保存データと認証セッションをすべて消去しました。");
     toast("保存データを全消去しました", "bad");
-    showGate();
+    logout("保存データの全消去", "warn");
   });
 
   /* ==========================================================
@@ -2146,7 +2948,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     renderLog();
 
     if (!state.events.length) {
-      log("info", "Nevi Web Center を起動しました（完全ローカル動作・外部通信なし）。");
+      log("info", "Nevi Web Center を起動しました。Discord OAuth2 の許可リスト認証でアクセスを制限しています。");
       log("info", "監視対象: PCリソース / /task 自動化 / Googleカレンダー / MCP接続 / /spec 応答。");
       log("warn", "MCPサーバ obsidian は切断状態です。接続が必要な場合はトグルをONにしてください。");
     }
@@ -2161,9 +2963,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       if (t.status === "running") { t.status = "idle"; t.progress = 0; startTask(t, "起動時の自動実行"); }
     });
 
-    if (state.unlocked && state.settings.pin) hideGate();
-    else if (state.unlocked && !state.settings.pin) hideGate();
-    else showGate();
+    /* 認証 → ルーティング（未認証はここでログイン画面に固定される） */
+    renderIdentity();
+    if (!consumeOAuthCallback()) router();
   }
 
   if (document.readyState === "loading") {
