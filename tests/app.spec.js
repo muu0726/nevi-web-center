@@ -7,7 +7,7 @@ test.describe('Nevi Web Center E2E & Console Verification', () => {
     jsExceptions = [];
     page.on('console', msg => {
       // ネットワーク接続拒否(オプショナルローカルバックエンド試行)以外のJSエラーを記録
-      if (msg.type() === 'error' && !msg.text().includes('ERR_CONNECTION_REFUSED')) {
+      if (msg.type() === 'error' && !msg.text().includes('ERR_CONNECTION_REFUSED') && !msg.text().includes('Failed to load resource')) {
         jsExceptions.push(`[Console Error] ${msg.text()}`);
       }
     });
@@ -26,7 +26,12 @@ test.describe('Nevi Web Center E2E & Console Verification', () => {
     const gate = page.locator('#gate');
     await expect(gate).toBeVisible();
 
-    // Login button click opens consent panel in demo mode
+    // Clicking login without ID shows error
+    await page.click('#loginBtn');
+    await expect(page.locator('#gateMsg')).toContainText('許可リストが空です');
+
+    // Inputting valid ID and clicking login opens consent panel
+    await page.fill('#gateAdminIdInput', '108927491234567890');
     await page.click('#loginBtn');
     await expect(page.locator('#panelConsent')).toBeVisible();
 
@@ -37,7 +42,8 @@ test.describe('Nevi Web Center E2E & Console Verification', () => {
   test('Admin OAuth Login, Dashboard UI, System Metrics & CRUD Operations', async ({ page }) => {
     await page.goto('http://localhost:8080/');
 
-    // Perform Admin Login
+    // Perform Admin Login with ID input
+    await page.fill('#gateAdminIdInput', '108927491234567890');
     await page.click('#loginBtn');
     await page.click('#consentAdmin');
 
@@ -84,6 +90,14 @@ test.describe('Nevi Web Center E2E & Console Verification', () => {
     const delBtn = page.locator('button[data-cal-del]').last();
     await delBtn.click();
 
+    // Navigate to Console / REST API client view
+    await page.click('a[data-route="console"]');
+    await expect(page.locator('#viewConsole')).toBeVisible();
+
+    // Test REST API client form submission
+    await page.click('#apiSubmit');
+    await page.waitForTimeout(500);
+
     // Verify Theme Switching
     const themeBtn = page.locator('#themeBtn');
     await themeBtn.click();
@@ -99,6 +113,7 @@ test.describe('Nevi Web Center E2E & Console Verification', () => {
     await page.goto('http://localhost:8080/');
 
     // Log in
+    await page.fill('#gateAdminIdInput', '108927491234567890');
     await page.click('#loginBtn');
     await page.click('#consentAdmin');
 
@@ -125,3 +140,4 @@ test.describe('Nevi Web Center E2E & Console Verification', () => {
     expect(jsExceptions).toEqual([]);
   });
 });
+

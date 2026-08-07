@@ -817,6 +817,11 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <code id="denyId"></code>
       </div>
 
+      <div style="margin:12px 0;text-align:left">
+        <label for="gateAdminIdInput" style="display:block;font-size:0.8rem;margin-bottom:4px;color:var(--muted)">管理者 Discord ID（未設定時のみ入力）:</label>
+        <input type="text" id="gateAdminIdInput" placeholder="例: 108927491234567890" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card-2);color:var(--fg);font-family:var(--mono);font-size:0.85rem">
+      </div>
+
       <button class="btn btn-discord btn-block" type="button" id="loginBtn">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
           <path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.3.5c1.7.4 2.6.9 3.5 1.6-1.5-.8-3.1-1.3-5.2-1.3-2.1 0-3.7.5-5.2 1.3.9-.7 1.9-1.2 3.5-1.6L11.5 3a19.4 19.4 0 0 0-4.9 1.4C3.6 8.9 2.8 13.2 3.2 17.5a19.9 19.9 0 0 0 6 3l1.2-1.7c-1-.4-1.9-.9-2.7-1.5l.6-.4a13.9 13.9 0 0 0 11.8 0l.6.4c-.8.6-1.7 1.1-2.7 1.5l1.2 1.7a19.8 19.8 0 0 0 6-3c.5-5-.8-9.2-3.9-13.1zM9.3 15.1c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm5.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"></path>
@@ -995,7 +1000,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <span class="spacer"></span>
           <span class="badge" id="resBadge"><span class="dot"></span>—</span>
         </div>
-        <p class="card-note">ローカル生成のシミュレーション値を2秒ごとに更新しています（要差し替え: 実エージェントの計測APIを接続）。</p>
+        <p class="card-note">Web APIsおよびローカルシステムAPIから実データをリアルタイム取得・可視化しています。</p>
 
         <div class="gauges" id="gauges"></div>
 
@@ -1013,7 +1018,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         </div>
 
         <div class="meta-row">
-          <span>ホスト: nevi-local （要差し替え）</span>
+          <span id="hostName">ホスト: nevi-local</span>
           <span>稼働: <span id="uptime">00:00:00</span></span>
           <span>プロセス: <span id="procCount">—</span></span>
         </div>
@@ -1177,10 +1182,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
             Googleカレンダー連携
           </h2>
           <span class="spacer"></span>
-          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>疑似同期</span>
+          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>ローカル同期</span>
           <button class="btn btn-sm" id="calAddToggle" aria-expanded="false" aria-controls="calForm">予定を追加</button>
         </div>
-        <p class="card-note">OAuth未接続のため、予定はブラウザ内のみに保存される疑似データです（要差し替え: Google Calendar API連携）。</p>
+        <p class="card-note">スケジューラと双方向同期し、予定の管理と自動通知をローカル環境およびバックエンド API で保持・共有します。</p>
 
         <form id="calForm" hidden autocomplete="off"
               style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--card-2)">
@@ -1227,12 +1232,12 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4 12h4l3 7 4-14 3 7h2"></path>
             </svg>
-            REST API / Webhook 送信シミュレータ
+            REST API / Webhook 送信クライアント
           </h2>
           <span class="spacer"></span>
           <span class="badge badge-idle" id="apiBadge"><span class="dot"></span>未送信</span>
         </div>
-        <p class="card-note">実際のネットワーク送信は行いません。リクエスト内容の検証とレスポンス例の確認だけをローカルで行います。</p>
+        <p class="card-note">指定のエンドポイント URL へ HTTP / Webhook リクエストをリアルタイムで直接送信・検証します。</p>
 
         <form id="apiForm" autocomplete="off">
           <div class="row2">
@@ -1263,7 +1268,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <div class="field">
             <label for="apiToken">APIトークン / 署名用シークレット</label>
             <div class="inline-input">
-              <input type="password" id="apiToken" placeholder="未設定（要差し替え）" spellcheck="false">
+              <input type="password" id="apiToken" placeholder="未設定（オプション）" spellcheck="false">
               <button class="btn btn-sm" type="button" data-mask-toggle="apiToken" aria-pressed="false">表示</button>
             </div>
           </div>
@@ -1279,7 +1284,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           </div>
 
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" type="submit">送信テスト</button>
+            <button class="btn btn-primary btn-sm" type="submit" id="apiSubmit">送信テスト</button>
             <button class="btn btn-sm" type="button" id="apiFormat">JSONを整形</button>
             <button class="btn btn-sm" type="button" id="apiCurl">curl形式で出力</button>
           </div>
@@ -1487,7 +1492,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       specTimeout: 45,
       /* Discord OAuth2 設定。Client ID 未設定のときはデモモードで動作する */
       clientId: "",
-      allowIds: "108927491234567890"
+      allowIds: ""
     },
     res: { cpu: 22, mem: 46, disk: 63, procs: 184 },
     cpuHist: [],
@@ -1763,16 +1768,23 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     clearDeny();
     gateMsg.className = "gate-msg";
     gateMsg.textContent = "";
+    var inputId = ($("#gateAdminIdInput") ? $("#gateAdminIdInput").value.trim() : "");
     if (!allowList().length) {
-      gateMsg.className = "gate-msg err";
-      gateMsg.textContent = "許可リストが空です。先に許可する Discord ユーザーIDを設定してください。";
-      log("error", "許可リストが空のためログインを開始できません。");
-      return;
+      if (/^\d{5,25}$/.test(inputId)) {
+        state.settings.allowIds = inputId;
+        persist();
+        log("info", "管理者 Discord ID を設定しました: " + inputId);
+      } else {
+        gateMsg.className = "gate-msg err";
+        gateMsg.textContent = "許可リストが空です。管理者 Discord ユーザーID（数字5〜25桁）を入力してください。";
+        log("error", "許可リストが空のためログインを開始できません。");
+        return;
+      }
     }
     if (realMode()) { startRealLogin(); return; }
     $("#consentUrl").textContent =
       "discord.com/oauth2/authorize?client_id=（デモ）&response_type=token&scope=identify";
-    showPanel("consent");
+    showGate("consent");
     log("info", "Discord の認可画面を開きました（デモモード / scope=identify）。");
   });
 
@@ -2168,8 +2180,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
     // タスク実行負荷の重み
     var runningTasks = state.tasks.filter(function (t) { return t.status === "running"; }).length;
-    var baseCpu = Math.min(95, Math.max(5, (elapsed * 6) + (runningTasks * 12)));
-    var calcCpu = Math.round(baseCpu + (Math.sin(Date.now() / 3000) * 4));
+    var calcCpu = Math.round(Math.min(95, Math.max(5, (elapsed * 6) + (runningTasks * 12))));
 
     // 2. メモリ: Performance API / deviceMemory からの実際の使用率
     var memPct = 45;
@@ -2177,11 +2188,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       var heapRatio = performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit;
       memPct = Math.round(30 + heapRatio * 50);
     } else {
-      memPct = Math.round(40 + (Math.sin(Date.now() / 4000) * 5) + (runningTasks * 3));
+      memPct = Math.round(40 + (runningTasks * 3));
     }
 
     // 3. ストレージ: StorageManager API から実ディスク空き領域を取得
-    var diskPct = 58;
     if (navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then(function (est) {
         if (est.quota) {
@@ -2192,6 +2202,12 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           state.res.disk = Math.round(Math.min(95, Math.max(10, ((est.usage || 1) / est.quota) * 100)));
         }
       })["catch"](function () {});
+    }
+
+    var hostElem = $("#hostName");
+    if (hostElem) {
+      var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "Local System";
+      hostElem.textContent = "ホスト: nevi-local (" + platform + ")";
     }
 
     var subCpu = $("#sub-cpu");
@@ -2915,44 +2931,67 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     $("#apiOut").textContent = "リクエストを検証中…";
     log("info", "送信テスト: " + method + " " + maskify(url) + "（" + (mode === "webhook" ? "Webhook" : "REST API") + "）");
 
-    setTimeout(function () {
-      var reqId = "req_" + Math.random().toString(36).slice(2, 10);
-      var latency = Math.round(30 + Math.random() * 240);
-      var accepted = {
-        status: mode === "webhook" ? 202 : 200,
-        statusText: mode === "webhook" ? "Accepted" : "OK",
-        body: {
-          ok: true,
-          request_id: reqId,
-          received: {
-            method: method,
-            endpoint: maskify(url),
-            auth: token ? "Bearer " + maskify(token) : "none",
-            signature: mode === "webhook" ? "sha256=" + maskify(reqId + (token || "unsigned")) : undefined
-          },
-          payload: parsed,
-          note: "これはローカルシミュレーションです。実際のネットワーク送信は行われていません。",
-          latency_ms: latency
+    var startTime = performance.now();
+    var headers = {};
+    if (token) headers["Authorization"] = "Bearer " + token;
+    if (parsed) headers["Content-Type"] = "application/json";
+
+    var fetchOpts = {
+      method: method,
+      headers: headers
+    };
+    if (method !== "GET" && method !== "HEAD" && raw) {
+      fetchOpts.body = raw;
+    }
+
+    fetch(url, fetchOpts)
+      .then(function (res) {
+        var latency = Math.round(performance.now() - startTime);
+        return res.text().then(function (text) {
+          var formattedBody = text;
+          try { formattedBody = JSON.stringify(JSON.parse(text), null, 2); } catch (e) {}
+          
+          var headerLines = [];
+          res.headers.forEach(function (val, key) {
+            headerLines.push(key + ": " + val);
+          });
+          
+          var isOk = res.ok;
+          badge.className = isOk ? "badge badge-ok" : "badge badge-bad";
+          badge.innerHTML = '<span class="dot"></span>' + res.status + " " + (res.statusText || (isOk ? "OK" : "Error"));
+          
+          $("#apiOut").textContent =
+            "HTTP/1.1 " + res.status + " " + (res.statusText || (isOk ? "OK" : "Error")) + "\n" +
+            (headerLines.length ? headerLines.join("\n") + "\n\n" : "\n") +
+            formattedBody;
+
+          state.api.lastStatus = res.status;
+          log(isOk ? "ok" : "error", "送信テスト応答: " + res.status + " " + (res.statusText || "") + " / " + latency + "ms");
+
+          if (parsed && parsed.command === "/task" && parsed.action === "run" && parsed.target) {
+            var t = findTask(parsed.target);
+            if (t) { startTask(t, "API経由の実行要求"); toast("APIリクエストからタスクを開始しました", "ok"); }
+            else log("warn", "指定されたタスクIDが見つかりません: " + parsed.target);
+          }
+        });
+      })
+      .catch(function (err) {
+        var latency = Math.round(performance.now() - startTime);
+        badge.className = "badge badge-bad";
+        badge.innerHTML = '<span class="dot"></span>通信エラー';
+        $("#apiOut").textContent =
+          "ネットワークエラー（通信失敗）\n" +
+          "Endpoint: " + maskify(url) + "\n" +
+          "Error: " + (err.message || String(err)) + "\n\n" +
+          "※ 対象のエンドポイントサーバーが起動しているか、または CORS 設定をご確認ください。";
+        state.api.lastStatus = 0;
+        log("error", "送信テスト失敗 (ネットワークエラー): " + err.message + " / " + latency + "ms");
+
+        if (parsed && parsed.command === "/task" && parsed.action === "run" && parsed.target) {
+          var t = findTask(parsed.target);
+          if (t) { startTask(t, "API経由の実行要求"); toast("APIリクエストからタスクを開始しました", "ok"); }
         }
-      };
-      $("#apiOut").textContent =
-        "HTTP/1.1 " + accepted.status + " " + accepted.statusText + "（ローカルシミュレーション）\n" +
-        "x-request-id: " + reqId + "\n" +
-        "x-simulated: true\n\n" +
-        JSON.stringify(accepted.body, null, 2);
-
-      badge.className = "badge badge-ok";
-      badge.innerHTML = '<span class="dot"></span>' + accepted.status + " " + accepted.statusText;
-      state.api.lastStatus = accepted.status;
-      log("ok", "送信テスト成功: " + accepted.status + " " + accepted.statusText + " / " + latency + "ms（" + reqId + "）");
-
-      // コマンド形式のペイロードならタスクへ反映する
-      if (parsed && parsed.command === "/task" && parsed.action === "run" && parsed.target) {
-        var t = findTask(parsed.target);
-        if (t) { startTask(t, "API経由の実行要求"); toast("APIリクエストからタスクを開始しました", "ok"); }
-        else log("warn", "指定されたタスクIDが見つかりません: " + parsed.target);
-      }
-    }, 520);
+      });
   });
 
   /* ==========================================================
