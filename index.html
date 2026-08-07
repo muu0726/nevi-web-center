@@ -613,6 +613,30 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 /* ゲート内のフォーム（左寄せにして本文と揃える） */
 .gate-field { text-align: left; margin: 14px 0 12px; }
 
+/* Client ID の設定（普段は畳んでおく / ログイン前でも実接続へ切り替えられる） */
+.gate-config {
+  text-align: left;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: var(--bg-deep);
+}
+.gate-config > summary {
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 700;
+  color: var(--muted);
+  /* スマホでも押しやすい当たり判定にする */
+  padding: 6px 0;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+}
+.gate-config > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.gate-config[open] > summary { color: var(--fg-strong); }
+.gate-config code { overflow-wrap: anywhere; }
+
 /* 免責表示: このゲートは表示制御であってセキュリティ境界ではない */
 .gate-note {
   text-align: left;
@@ -633,6 +657,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   color: #ffffff;
 }
 .btn-discord:hover { background: #4752c4; border-color: #4752c4; }
+/* スマホの親指操作を想定し、ログイン導線は十分なタップ領域を確保する */
+.btn-discord.btn-block { min-height: 48px; font-size: .9rem; margin-top: 4px; }
+#panelConsent .account-btn { min-height: 52px; }
+#gateSaveClientId { min-height: 40px; }
 
 .gate-mode {
   display: inline-flex;
@@ -824,21 +852,14 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
               stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
       <h2 id="gateTitle">Nevi Web Center</h2>
-      <p id="gateDesc">管理者専用ダッシュボードです。許可リストに登録された Discord アカウントだけがログインできます。</p>
+      <p id="gateDesc">オーナー専用の操作ダッシュボードです。Discord OAuth2 でログインし、ホワイトリストに登録された 1 アカウントだけがアクセスできます。</p>
 
       <p class="gate-msg" id="gateMsg" role="status" aria-live="polite"></p>
 
       <div class="deny" id="denyBox" hidden>
         <b>アクセスが拒否されました</b>
-        <span id="denyText">このアカウントは許可リストに登録されていません。</span>
+        <span id="denyText">このアカウントはホワイトリストに登録されていません。</span>
         <code id="denyId"></code>
-      </div>
-
-      <div class="field gate-field">
-        <label for="gateAdminIdInput">許可する Discord ユーザーID（この端末で最初に設定する管理者ID）</label>
-        <input type="text" id="gateAdminIdInput" inputmode="numeric" autocomplete="off"
-               spellcheck="false" placeholder="例: 000000000000000000">
-        <span class="hint">許可リストが空のときだけ使います。ここで入力したIDがこのブラウザの許可リストに保存され、以降は入力不要です。ログイン後は「コンソールと権限」タブでいつでも変更できます。</span>
       </div>
 
       <button class="btn btn-discord btn-block" type="button" id="loginBtn">
@@ -874,9 +895,23 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         </li>
       </ul>
 
+      <details class="gate-config" id="gateConfig">
+        <summary>Discord アプリケーションの Client ID を設定する</summary>
+        <div class="field gate-field">
+          <label for="gateClientIdInput">Client ID（Discord Developer Portal のアプリケーションID）</label>
+          <input type="text" id="gateClientIdInput" inputmode="numeric" autocomplete="off"
+                 spellcheck="false" placeholder="例: 000000000000000000">
+          <span class="hint">
+            設定すると discord.com の実際の認可画面（Implicit Grant）へ遷移します。未設定のあいだは外部通信を行わないデモモードで動作します。
+            Developer Portal の OAuth2 設定には、次のリダイレクトURIを登録してください: <code id="gateRedirect">—</code>
+          </span>
+        </div>
+        <button class="btn btn-sm btn-block" type="button" id="gateSaveClientId">この端末に保存する</button>
+      </details>
+
       <p class="gate-note">
         <b>この画面はセキュリティ境界ではありません。</b>
-        本サイトはサーバーを持たない静的サイトで、許可リストの照合もセッション管理もすべてブラウザ内で完結しています。
+        本サイトはサーバーを持たない静的サイトで、ホワイトリストの照合もセッション管理もすべてブラウザ内で完結しています。
         ブラウザの開発者ツールから LocalStorage を書き換えれば、この画面は誰でも通過できます。
         表示しているのはこの端末に保存されたデモデータだけなので、機密情報や本物の認証情報は入力しないでください。
       </p>
@@ -1146,12 +1181,12 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <dl class="kv">
           <dt>保護ルート</dt><dd>/dashboard, /tasks, /console</dd>
           <dt>認証方式</dt><dd id="guardMode">—</dd>
-          <dt>許可ID数</dt><dd id="guardAllow">—</dd>
+          <dt>許可アカウント</dt><dd id="guardAllow">—</dd>
           <dt>セッション期限</dt><dd id="guardExp">—</dd>
         </dl>
 
         <p class="card-note" style="margin:0">
-          許可IDや Client ID の変更は「コンソールと権限」タブのアクセス制御カードから行えます。
+          許可する Discord ユーザーIDは 1 件に固定されています。Client ID の変更は「コンソールと権限」タブのアクセス制御カードから行えます。
         </p>
       </section>
     </div>
@@ -1331,7 +1366,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <span class="badge badge-ok" id="authBadge"><span class="dot"></span>認証済み</span>
         </div>
 
-        <p class="card-note">この認証はブラウザ内だけで完結しています。許可リストもセッションもこの端末の LocalStorage にあり、開発者ツールから書き換えれば迂回できます。実際にアクセスを制限したい場合は、サーバー側でトークンを検証する構成が必要です。</p>
+        <p class="card-note">アクセスを許可する Discord ユーザーIDは、このページのソースに固定で埋め込まれた 1 件だけです（画面からは変更できません）。ただし照合もセッション管理もブラウザ内で完結しているため、開発者ツールから書き換えれば迂回できます。実際にアクセスを制限したい場合は、サーバー側でトークンを検証する構成が必要です。</p>
 
         <div class="session-head">
           <img class="avatar" id="authAvatar" src="" alt="" width="44" height="44">
@@ -1364,10 +1399,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         </div>
 
         <div class="field">
-          <label for="setAllowIds">許可する Discord ユーザーID（ホワイトリスト / 改行・カンマ区切り）</label>
-          <textarea id="setAllowIds" rows="3" spellcheck="false"
-                    placeholder="000000000000000000"></textarea>
-          <span class="hint">ここに無いIDでログインした場合は、ユーザー情報の取得直後にセッションを破棄してアクセスを拒否します。判定はブラウザ内で行われるため、本物のアクセス制御としては機能しません。</span>
+          <label for="setAllowIds">許可する Discord ユーザーID（ホワイトリスト / 変更不可）</label>
+          <textarea id="setAllowIds" rows="1" spellcheck="false" readonly aria-readonly="true"></textarea>
+          <span class="hint">このIDはソースコードに固定されており、画面からの追加・削除はできません。これ以外のアカウントでログインした場合は、ユーザー情報の取得直後にセッションを破棄してアクセスを拒否します。判定はブラウザ内で行われるため、本物のアクセス制御としては機能しません。</span>
         </div>
 
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1433,7 +1467,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
   <footer class="foot">
     <span>Nevi Web Center — オーナー（ご主人さま）専用操作コントロールセンター</span>
-    <span>認証: Discord OAuth2（identify）/ 許可IDはこの端末にのみ保存されます</span>
+    <span>認証: Discord OAuth2（identify）/ 許可アカウントは 1 件のみ（<span id="footOwner">—</span>）</span>
     <span id="footNote">ブラウザ内で完結して動作中（バックエンド未接続）</span>
   </footer>
 </div>
@@ -1503,15 +1537,25 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     return ymd(d);
   }
 
+  /* ==========================================================
+     アクセスを許可する Discord ユーザーID（ホワイトリスト）
+
+     このダッシュボードはオーナー1人専用のため、許可IDはソースに固定する。
+     LocalStorage には保存せず、画面からも変更できない（＝保存データを
+     消しても、開発者ツールで設定を書き換えても、許可されるIDは増えない）。
+     ただしこの照合はブラウザ内で完結しており、セキュリティ境界ではない。
+     ========================================================== */
+  var OWNER_ID = "1215266201589129259";
+  var ALLOW_IDS = [OWNER_ID];
+
   /* 既定値は1か所で定義する（起動時と「保存データを全消去」で必ず一致させる）。
-     許可IDと Client ID は空 = 初回ログイン時に利用者が自分のIDを登録する。 */
+     Client ID は空 = 外部通信なしのデモモードで動作する。 */
   var DEFAULT_SETTINGS = {
     poll: 2000,
     apiUrl: "",
     apiToken: "",
     specTimeout: 45,
-    clientId: "",
-    allowIds: ""
+    clientId: ""
   };
 
   var state = {
@@ -1523,8 +1567,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       apiUrl: DEFAULT_SETTINGS.apiUrl,
       apiToken: DEFAULT_SETTINGS.apiToken,
       specTimeout: DEFAULT_SETTINGS.specTimeout,
-      clientId: DEFAULT_SETTINGS.clientId,
-      allowIds: DEFAULT_SETTINGS.allowIds
+      clientId: DEFAULT_SETTINGS.clientId
     },
     res: { cpu: 8, mem: 40, disk: 20, procs: 0 },
     cpuHist: [],
@@ -1650,7 +1693,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
      静的サイトのためクライアントシークレットを持てない。よって
      Implicit Grant（response_type=token）で identify スコープのみを
-     取得し、users/@me のユーザーIDを許可リストと突き合わせる。
+     取得し、users/@me のユーザーIDを固定ホワイトリスト（OWNER_ID）と
+     突き合わせる。一致しないアカウントはセッションを作らずに拒否する。
      Client ID 未設定時は外部通信なしのデモモードで同じ流れを再現する。
      ========================================================== */
   var AUTH_KEY = "nevi.webcenter.auth.v1";
@@ -1668,12 +1712,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   var gate = $("#gate");
   var gateMsg = $("#gateMsg");
 
-  function allowList() {
-    return String(state.settings.allowIds || "")
-      .split(/[\s,]+/)
-      .filter(function (v) { return /^\d{5,25}$/.test(v); });
-  }
-  function isAllowed(id) { return allowList().indexOf(String(id)) >= 0; }
+  /* ホワイトリストは固定。保存値を一切参照しないので、LocalStorage を
+     書き換えても許可されるIDは OWNER_ID のままになる。 */
+  function allowList() { return ALLOW_IDS.slice(); }
+  function isAllowed(id) { return ALLOW_IDS.indexOf(String(id)) >= 0; }
   function isAuthed() { return !!(auth.user && auth.expires > Date.now() && isAllowed(auth.user.id)); }
   function realMode() { return /^\d{5,25}$/.test(String(state.settings.clientId || "").trim()); }
   function modeLabel(m) { return m === "discord" ? "Discord 実接続 (Implicit Grant)" : "デモモード（外部通信なし）"; }
@@ -1712,7 +1754,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       var raw = localStorage.getItem(AUTH_KEY);
       if (!raw) return;
       var a = JSON.parse(raw);
-      if (a && a.user && a.expires > Date.now()) auth = a;
+      /* 期限切れ、またはホワイトリスト外のIDが保存されていた場合は破棄する */
+      if (a && a.user && a.expires > Date.now() && isAllowed(a.user.id)) auth = a;
       else localStorage.removeItem(AUTH_KEY);
     } catch (e) { /* 壊れた値は無視 */ }
   })();
@@ -1738,10 +1781,13 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       $("#gateMode").textContent = realMode()
         ? "認証モード: Discord 実接続（Client ID 設定済み）"
         : "認証モード: デモ（Client ID 未設定 / 外部通信なし）";
-      $("#gateAllowNote").textContent = "許可されている Discord ID: " +
-        (ids.length ? ids.join(" / ") : "（未設定 / 上の入力欄で登録できます）");
-      $("#consentAdminId").textContent = "ID: " + (ids[0] || "—");
-      $("#consentAdminAvatar").src = localAvatar({ id: ids[0] || "0", global_name: "ご主人さま" });
+      $("#gateAllowNote").textContent =
+        "アクセスできるのは Discord ユーザーID " + ids.join(" / ") +
+        " のアカウントだけです。他のアカウントでログインしても、ユーザー情報を照合した時点で拒否されます。";
+      $("#gateClientIdInput").value = state.settings.clientId;
+      $("#gateRedirect").textContent = redirectUri();
+      $("#consentAdminId").textContent = "ID: " + ids[0];
+      $("#consentAdminAvatar").src = localAvatar({ id: ids[0], global_name: "ご主人さま" });
     } catch (e) {
       gateMsg.className = "gate-msg err";
       gateMsg.textContent = "ログイン画面の描画に失敗しました: " + e.message;
@@ -1750,7 +1796,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     if (panel === "login") {
       setTimeout(function () {
         if (gate.hidden) return;
-        var focusTarget = allowList().length ? $("#loginBtn") : $("#gateAdminIdInput");
+        var focusTarget = $("#loginBtn");
         if (focusTarget) focusTarget.focus();
       }, 30);
     }
@@ -1764,7 +1810,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   function showDeny(u) {
     $("#denyBox").hidden = false;
     $("#denyText").textContent = displayName(u) +
-      " さんのアカウントは、このダッシュボードの許可リストに登録されていません。管理者に許可IDの追加を依頼してください。";
+      " さんのアカウントは、このダッシュボードのホワイトリスト（オーナー1件のみ）に含まれていません。" +
+      "オーナー本人の Discord アカウントでログインし直してください。";
     $("#denyId").textContent = "拒否された Discord ID: " + u.id;
   }
   function clearDeny() { $("#denyBox").hidden = true; }
@@ -1830,7 +1877,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     showPanel("pending");
     $("#pendingText").textContent = "アクセストークンを検証し、ユーザー情報を取得しています（デモ）。";
     var u = {
-      id: allowList()[0] || "0",
+      id: OWNER_ID,
       username: "nevi.master",
       global_name: "ご主人さま",
       avatar: null,
@@ -1843,33 +1890,43 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     clearDeny();
     gateMsg.className = "gate-msg";
     gateMsg.textContent = "";
-    var idInput = $("#gateAdminIdInput");
-    var inputId = idInput ? idInput.value.trim() : "";
-    if (!allowList().length) {
-      if (/^\d{5,25}$/.test(inputId)) {
-        state.settings.allowIds = inputId;
-        persist();
-        syncSettingsInputs();
-        log("info", "管理者 Discord ID を設定しました: " + inputId);
-      } else {
-        gateMsg.className = "gate-msg err";
-        gateMsg.textContent = "許可リストが空です。管理者 Discord ユーザーID（数字5〜25桁）を入力してください。";
-        log("error", "許可リストが空のためログインを開始できません。");
-        if (idInput) idInput.focus();
-        return;
-      }
-    }
     if (realMode()) { startRealLogin(); return; }
     $("#consentUrl").textContent =
       "discord.com/oauth2/authorize?client_id=（デモ）&response_type=token&scope=identify";
     showGate("consent");
   });
 
-  /* Enter キーでもログインを開始できるようにする（スマホのソフトキーボード対策） */
-  $("#gateAdminIdInput").addEventListener("keydown", function (ev) {
+  /* Client ID はログイン前にも設定できるようにする。
+     ログインしないと設定画面に入れない＝実接続に切り替えられない、を避ける。 */
+  function saveGateClientId() {
+    var input = $("#gateClientIdInput");
+    var cid = input.value.trim();
+    if (cid && !/^\d{5,25}$/.test(cid)) {
+      gateMsg.className = "gate-msg err";
+      gateMsg.textContent = "Client ID は数字（5〜25桁）で入力してください。";
+      input.focus();
+      return false;
+    }
+    state.settings.clientId = cid;
+    persist();
+    syncSettingsInputs();
+    gateMsg.className = "gate-msg ok";
+    gateMsg.textContent = cid
+      ? "Client ID を保存しました。ログインすると discord.com の認可画面へ遷移します。"
+      : "Client ID を消去しました。デモモード（外部通信なし）で動作します。";
+    log("ok", cid ? "Discord Client ID を保存しました（実接続モード）。" : "Discord Client ID を消去しました（デモモード）。");
+    showGate("login");
+    $("#gateConfig").open = false;
+    return true;
+  }
+
+  $("#gateSaveClientId").addEventListener("click", saveGateClientId);
+
+  /* Enter キーでも確定できるようにする（スマホのソフトキーボード対策） */
+  $("#gateClientIdInput").addEventListener("keydown", function (ev) {
     if (ev.key === "Enter") {
       ev.preventDefault();
-      $("#loginBtn").click();
+      saveGateClientId();
     }
   });
 
@@ -1888,7 +1945,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       showDeny(user);
       gateMsg.className = "gate-msg err";
       gateMsg.textContent = "許可されていないアカウントです。";
-      log("error", "アクセス拒否: " + displayName(user) + "（ID: " + user.id + "）は許可リストにありません。");
+      log("error", "アクセス拒否: " + displayName(user) + "（ID: " + user.id + "）はホワイトリストにありません。");
       toast("アクセスが拒否されました", "bad");
       return;
     }
@@ -1940,7 +1997,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     var chip = $("#userChip");
     var blank = localAvatar({ id: "0", global_name: "?" });
 
-    $("#guardAllow").textContent = allowList().length + " 件";
+    $("#guardAllow").textContent = allowList().join(" / ") + "（固定 / 1件）";
 
     if (!auth.user) {
       chip.hidden = true;
@@ -2158,25 +2215,12 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       toast("Client ID は数字のみで入力してください", "bad");
       return;
     }
-    var ids = $("#setAllowIds").value.split(/[\s,]+/).filter(Boolean);
-    var invalid = ids.filter(function (v) { return !/^\d{5,25}$/.test(v); });
-    if (invalid.length) {
-      toast("Discord ユーザーIDは数字のみです: " + invalid[0], "bad");
-      return;
-    }
     state.settings.clientId = cid;
-    state.settings.allowIds = ids.join("\n");
     persist();
     syncSettingsInputs();
-    log("ok", "認証設定を保存しました（許可ID " + ids.length + "件 / " +
-      (realMode() ? "Discord 実接続" : "デモモード") + "）。");
+    log("ok", "認証設定を保存しました（" +
+      (realMode() ? "Discord 実接続" : "デモモード") + " / 許可IDは固定の1件）。");
     toast("認証設定を保存しました", "ok");
-
-    if (auth.user && !isAllowed(auth.user.id)) {
-      log("error", "現在のログインユーザーが許可リストから外れたため、セッションを破棄しました。");
-      logout("許可リストからの除外", "error");
-      return;
-    }
     renderIdentity();
   });
 
@@ -3092,6 +3136,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   function syncSettingsInputs() {
     $("#setClientId").value = state.settings.clientId;
     $("#setAllowIds").value = allowList().join("\n");
+    $("#footOwner").textContent = allowList().join(" / ");
     $("#redirectUri").value = redirectUri();
     $("#setPoll").value = state.settings.poll;
     $("#apiUrl").value = state.settings.apiUrl;
@@ -3142,8 +3187,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       apiUrl: DEFAULT_SETTINGS.apiUrl,
       apiToken: DEFAULT_SETTINGS.apiToken,
       specTimeout: DEFAULT_SETTINGS.specTimeout,
-      clientId: DEFAULT_SETTINGS.clientId,
-      allowIds: DEFAULT_SETTINGS.allowIds
+      clientId: DEFAULT_SETTINGS.clientId
     };
     syncSettingsInputs();
     restartResTimer();
@@ -3199,7 +3243,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     renderLog();
 
     if (!state.events.length) {
-      log("info", "Nevi Web Center を起動しました。Discord OAuth2 の許可リスト認証でアクセスを制限しています。");
+      log("info", "Nevi Web Center を起動しました。Discord OAuth2 認証と固定ホワイトリスト（1件）でアクセスを制限しています。");
       log("info", "監視対象: PCリソース / /task 自動化 / Googleカレンダー / MCP接続 / /spec 応答。");
       log("warn", "MCPサーバ obsidian は切断状態です。接続が必要な場合はトグルをONにしてください。");
     }
