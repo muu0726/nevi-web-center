@@ -817,16 +817,20 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <code id="denyId"></code>
       </div>
 
-      <div style="margin:12px 0;text-align:left">
-        <label for="gateAdminIdInput" style="display:block;font-size:0.8rem;margin-bottom:4px;color:var(--muted)">管理者 Discord ID（未設定時のみ入力）:</label>
-        <input type="text" id="gateAdminIdInput" placeholder="例: 108927491234567890" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card-2);color:var(--fg);font-family:var(--mono);font-size:0.85rem">
+      <div style="margin:16px 0;padding:14px;border-radius:12px;background:var(--card-2);border:1px solid var(--line);text-align:left">
+        <label for="passcodeInput" style="display:block;font-size:0.82rem;font-weight:600;margin-bottom:6px;color:var(--fg)">📱 外出先・スマホ用ワンタイムコードログイン:</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="passcodeInput" placeholder="例: 849-201 または 849201" maxlength="7" style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg-deep);color:var(--fg);font-family:var(--mono);font-size:1rem;letter-spacing:2px;text-align:center">
+          <button class="btn btn-primary" type="button" id="passcodeBtn">コードで認証</button>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;margin-bottom:0">※ Discord で「<code>/passcode</code>」または「ログインコード発行して」と送信して取得した 6 桁コードを入力してください。</p>
       </div>
 
       <button class="btn btn-discord btn-block" type="button" id="loginBtn">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
           <path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.3.5c1.7.4 2.6.9 3.5 1.6-1.5-.8-3.1-1.3-5.2-1.3-2.1 0-3.7.5-5.2 1.3.9-.7 1.9-1.2 3.5-1.6L11.5 3a19.4 19.4 0 0 0-4.9 1.4C3.6 8.9 2.8 13.2 3.2 17.5a19.9 19.9 0 0 0 6 3l1.2-1.7c-1-.4-1.9-.9-2.7-1.5l.6-.4a13.9 13.9 0 0 0 11.8 0l.6.4c-.8.6-1.7 1.1-2.7 1.5l1.2 1.7a19.8 19.8 0 0 0 6-3c.5-5-.8-9.2-3.9-13.1zM9.3 15.1c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm5.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"></path>
         </svg>
-        Discordでログイン
+        Discord OAuth2でログイン
       </button>
 
       <p class="gate-mode" id="gateMode">認証モード: 判定中…</p>
@@ -877,15 +881,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <button class="btn account-btn" type="button" id="consentAdmin">
           <img class="avatar" id="consentAdminAvatar" src="" alt="" width="34" height="34">
           <span class="who">
-            <b>ご主人さま（管理者アカウント）</b>
-            <span id="consentAdminId">ID: —</span>
-          </span>
-        </button>
-        <button class="btn account-btn" type="button" id="consentGuest">
-          <img class="avatar" id="consentGuestAvatar" src="" alt="" width="34" height="34">
-          <span class="who">
-            <b>ゲストユーザー（許可リスト外）</b>
-            <span id="consentGuestId">ID: 999999999999999999</span>
+            <b>ご主人さま（Owner 管理者アカウント）</b>
+            <span id="consentAdminId">ID: 1138853755490234478</span>
           </span>
         </button>
       </div>
@@ -1411,9 +1408,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   </section>
 
   <footer class="foot">
-    <span>Nevi Web Center — 単一HTML完結（外部CDN・Webフォント不使用）</span>
-    <span>認証: Discord OAuth2 / identify + 許可ID制</span>
-    <span id="footNote">表示データはすべてローカル生成のデモ値です（要差し替え）</span>
+    <span>Nevi Web Center — オーナー（ご主人さま）専用操作コントロールセンター</span>
+    <span>認証: Discord OAuth2 / Owner ID: 1138853755490234478</span>
+    <span id="footNote">⚡ ローカル Nevi 実機連携中（本番リアルタイムデータ連動）</span>
   </footer>
 </div>
 </div><!-- /#app -->
@@ -1487,12 +1484,11 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     theme: "auto",
     settings: {
       poll: 2000,
-      apiUrl: "http://127.0.0.1:8787/nevi/command",
+      apiUrl: "/api/status",
       apiToken: "",
       specTimeout: 45,
-      /* Discord OAuth2 設定。Client ID 未設定のときはデモモードで動作する */
       clientId: "",
-      allowIds: ""
+      allowIds: "1138853755490234478"
     },
     res: { cpu: 22, mem: 46, disk: 63, procs: 184 },
     cpuHist: [],
@@ -1785,7 +1781,33 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     $("#consentUrl").textContent =
       "discord.com/oauth2/authorize?client_id=（デモ）&response_type=token&scope=identify";
     showGate("consent");
-    log("info", "Discord の認可画面を開きました（デモモード / scope=identify）。");
+  $("#passcodeBtn").addEventListener("click", function () {
+    var code = $("#passcodeInput").value.trim();
+    if (!code) {
+      toast("ワンタイムコードを入力してください", "bad");
+      return;
+    }
+    showPanel("pending");
+    $("#pendingText").textContent = "ワンタイムログインコードを検証中…";
+
+    fetch("/api/auth_code?code=" + encodeURIComponent(code))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.ok && data.user) {
+          finishLogin(data.user, "passcode", Date.now() + 24 * 60 * 60 * 1000);
+        } else {
+          showGate("login");
+          gateMsg.className = "gate-msg err";
+          gateMsg.textContent = data.message || "コードが無効か期限切れです。Discordで /passcode を再発行してください。";
+          toast("認証失敗: " + (data.message || "無効なコード"), "bad");
+        }
+      })
+      ["catch"](function (err) {
+        showGate("login");
+        gateMsg.className = "gate-msg err";
+        gateMsg.textContent = "Nevi サーバーとの通信に失敗しました。";
+        toast("通信エラー", "bad");
+      });
   });
 
   $("#consentAdmin").addEventListener("click", function () { demoLogin("admin"); });
