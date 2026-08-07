@@ -3,3 +3,9 @@
 implementation_plan.md
 task.md
 walkthrough.md
+
+# 依存とテスト成果物（公開先には不要）
+node_modules/
+test-results/
+playwright-report/
+scratch/

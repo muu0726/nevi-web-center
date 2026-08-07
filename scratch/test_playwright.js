@@ -1,119 +1,86 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+/* 目視確認用: 主要ビューのスクリーンショットと全ボタンのクリック走査 */
 const { chromium } = require('playwright');
 
-// Simple static server
-const PORT = 8080;
-const HTML_PATH = path.join(__dirname, '..', 'index.html');
+const OWNER_ID = '000000000000000001';
+const BASE = 'http://localhost:8080';
 
-const server = http.createServer((req, res) => {
-  if (req.url === '/' || req.url.startsWith('/index.html')) {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(fs.readFileSync(HTML_PATH, 'utf8'));
-  } else {
-    res.writeHead(404);
-    res.end('Not Found');
-  }
-});
+(async () => {
+  const browser = await chromium.launch();
+  const problems = [];
 
-async function runTests() {
-  server.listen(PORT);
-  console.log(`Server running at http://localhost:${PORT}`);
+  for (const [name, opts] of [
+    ['desktop-dark', { viewport: { width: 1280, height: 900 }, colorScheme: 'dark' }],
+    ['desktop-light', { viewport: { width: 1280, height: 900 }, colorScheme: 'light' }],
+    ['mobile-dark', { viewport: { width: 375, height: 812 }, colorScheme: 'dark' }],
+    ['mobile-light', { viewport: { width: 375, height: 812 }, colorScheme: 'light' }],
+  ]) {
+    const ctx = await browser.newContext(opts);
+    const page = await ctx.newPage();
+    page.on('console', m => { if (m.type() === 'error') problems.push(`${name} console: ${m.text()}`); });
+    page.on('pageerror', e => problems.push(`${name} pageerror: ${e.message}`));
+    page.on('requestfailed', r => problems.push(`${name} requestfailed: ${r.url()}`));
 
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  
-  const consoleLogs = [];
-  const consoleErrors = [];
+    await page.goto(BASE + '/');
+    await page.screenshot({ path: `scratch/shot-${name}-gate.png`, fullPage: true });
 
-  page.on('console', msg => {
-    consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
-    if (msg.type() === 'error') {
-      consoleErrors.push(msg.text());
-    }
-  });
-
-  page.on('pageerror', err => {
-    consoleErrors.push(err.message);
-  });
-
-  try {
-    console.log('--- Navigating to page ---');
-    await page.goto(`http://localhost:${PORT}/index.html`);
-    await page.waitForLoadState('domcontentloaded');
-
-    // 1. Check title
-    const title = await page.title();
-    console.log('Page Title:', title);
-
-    // 2. Take screenshot of login gate
-    await page.screenshot({ path: path.join(__dirname, 'login_gate.png'), fullPage: true });
-    console.log('Saved screenshot: login_gate.png');
-
-    // 3. Click Login button to bring up consent panel
-    console.log('--- Testing Login Flow ---');
+    await page.fill('#gateAdminIdInput', OWNER_ID);
     await page.click('#loginBtn');
-    await page.waitForTimeout(500);
-
-    // 4. Click Consent Admin button
     await page.click('#consentAdmin');
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('#app:not([hidden])');
+    await page.waitForTimeout(2500);
 
-    // 5. Verify App is visible
-    const appVisible = await page.isVisible('#app');
-    console.log('App visible after login:', appVisible);
-
-    // 6. Screenshot dashboard
-    await page.screenshot({ path: path.join(__dirname, 'dashboard.png'), fullPage: true });
-    console.log('Saved screenshot: dashboard.png');
-
-    // 7. Test Responsive View (Mobile 375x812)
-    console.log('--- Testing Mobile Responsive Layout ---');
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.waitForTimeout(500);
-
-    const hasHScroll = await page.evaluate(() => {
-      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
-    });
-    console.log('Mobile horizontal scrollbar detected:', hasHScroll);
-
-    await page.screenshot({ path: path.join(__dirname, 'mobile_dashboard.png'), fullPage: true });
-    console.log('Saved screenshot: mobile_dashboard.png');
-
-    // 8. Test Task Execution
-    console.log('--- Testing Task Execution ---');
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.click('[data-act="run"][data-id="vault-backup"]');
-    await page.waitForTimeout(1500);
-
-    // 9. Test Calendar Event Creation
-    console.log('--- Testing Calendar Creation ---');
-    await page.click('#calAddToggle');
-    await page.waitForSelector('#calTitleInput', { state: 'visible' });
-    await page.fill('#calTitleInput', 'Playwright 自動テスト予定');
-    await page.fill('#calWhere', 'ローカル自動テスト環境');
-    await page.click('#calSubmit');
-    await page.waitForTimeout(500);
-
-    const calContent = await page.textContent('#calList');
-    console.log('Calendar includes new event:', calContent.includes('Playwright 自動テスト予定'));
-
-    // 10. Check Console Errors
-    console.log('--- Console Error Check ---');
-    console.log('Total Console Errors:', consoleErrors.length);
-    if (consoleErrors.length > 0) {
-      console.error('Console Errors:', consoleErrors);
-    } else {
-      console.log('SUCCESS: Zero console errors recorded!');
+    for (const route of ['dashboard', 'tasks', 'console']) {
+      await page.click(`a[data-route="${route}"]`);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `scratch/shot-${name}-${route}.png`, fullPage: true });
+      const of = await page.evaluate(() =>
+        document.documentElement.scrollWidth > document.documentElement.clientWidth);
+      if (of) problems.push(`${name}/${route}: horizontal overflow`);
     }
-
-  } catch (err) {
-    console.error('Test execution error:', err);
-  } finally {
-    await browser.close();
-    server.close();
+    await ctx.close();
   }
-}
 
-runTests();
+  // 全ボタン走査（例外が出ないこと）
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  page.on('console', m => { if (m.type() === 'error') problems.push(`sweep console: ${m.text()}`); });
+  page.on('pageerror', e => problems.push(`sweep pageerror: ${e.message}`));
+
+  await page.goto(BASE + '/');
+  await page.fill('#gateAdminIdInput', OWNER_ID);
+  await page.click('#loginBtn');
+  await page.click('#consentAdmin');
+  await page.waitForSelector('#app:not([hidden])');
+
+  const skip = new Set(['logoutBtn', 'logoutBtn2', 'clearAll', 'panicBtn']);
+  for (const route of ['dashboard', 'tasks', 'console']) {
+    await page.click(`a[data-route="${route}"]`);
+    await page.waitForTimeout(200);
+    const view = `#view${route[0].toUpperCase()}${route.slice(1)}`;
+    // DOM は操作のたびに再描画されるため、毎回インデックスで引き直す
+    const count = await page.locator(`${view} button:visible`).count();
+    for (let i = 0; i < count; i++) {
+      const b = page.locator(`${view} button:visible`).nth(i);
+      try {
+        const id = await b.getAttribute('id', { timeout: 1500 });
+        if (id && skip.has(id)) continue;
+        await b.click({ timeout: 1500 });
+      } catch (e) { /* 再描画で消えた・disabled などは無視 */ }
+      await page.waitForTimeout(60);
+    }
+  }
+  // 緊急停止と解除
+  await page.click('#panicBtn');
+  await page.waitForTimeout(300);
+  await page.click('#releaseBtn');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'scratch/shot-sweep-end.png', fullPage: true });
+  await ctx.close();
+
+  await browser.close();
+  if (problems.length) {
+    console.log('PROBLEMS:\n' + problems.join('\n'));
+    process.exit(1);
+  }
+  console.log('OK: 全ビュー描画・全ボタン走査でエラーなし');
+})();

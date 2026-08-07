@@ -610,6 +610,23 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 .gate-msg.err { color: var(--bad); }
 .gate-msg.ok { color: var(--ok); }
 
+/* ゲート内のフォーム（左寄せにして本文と揃える） */
+.gate-field { text-align: left; margin: 14px 0 12px; }
+
+/* 免責表示: このゲートは表示制御であってセキュリティ境界ではない */
+.gate-note {
+  text-align: left;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  font-size: .72rem;
+  line-height: 1.6;
+  color: var(--fg);
+}
+.gate-note b { color: var(--fg-strong); }
+
 .btn-discord {
   background: #5865f2;
   border-color: #5865f2;
@@ -817,13 +834,11 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         <code id="denyId"></code>
       </div>
 
-      <div style="margin:16px 0;padding:14px;border-radius:12px;background:var(--card-2);border:1px solid var(--line);text-align:left">
-        <label for="passcodeInput" style="display:block;font-size:0.82rem;font-weight:600;margin-bottom:6px;color:var(--fg)">📱 外出先・スマホ用ワンタイムコードログイン:</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="passcodeInput" placeholder="例: 849-201 または 849201" maxlength="7" style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg-deep);color:var(--fg);font-family:var(--mono);font-size:1rem;letter-spacing:2px;text-align:center">
-          <button class="btn btn-primary" type="button" id="passcodeBtn">コードで認証</button>
-        </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;margin-bottom:0">※ Discord で「<code>/passcode</code>」または「ログインコード発行して」と送信して取得した 6 桁コードを入力してください。</p>
+      <div class="field gate-field">
+        <label for="gateAdminIdInput">許可する Discord ユーザーID（この端末で最初に設定する管理者ID）</label>
+        <input type="text" id="gateAdminIdInput" inputmode="numeric" autocomplete="off"
+               spellcheck="false" placeholder="例: 000000000000000000">
+        <span class="hint">許可リストが空のときだけ使います。ここで入力したIDがこのブラウザの許可リストに保存され、以降は入力不要です。ログイン後は「コンソールと権限」タブでいつでも変更できます。</span>
       </div>
 
       <button class="btn btn-discord btn-block" type="button" id="loginBtn">
@@ -859,6 +874,13 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         </li>
       </ul>
 
+      <p class="gate-note">
+        <b>この画面はセキュリティ境界ではありません。</b>
+        本サイトはサーバーを持たない静的サイトで、許可リストの照合もセッション管理もすべてブラウザ内で完結しています。
+        ブラウザの開発者ツールから LocalStorage を書き換えれば、この画面は誰でも通過できます。
+        表示しているのはこの端末に保存されたデモデータだけなので、機密情報や本物の認証情報は入力しないでください。
+      </p>
+
       <p style="font-size:.72rem">
         アクセス要求先: <code id="gateNext">/dashboard</code>
       </p>
@@ -882,7 +904,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <img class="avatar" id="consentAdminAvatar" src="" alt="" width="34" height="34">
           <span class="who">
             <b>ご主人さま（Owner 管理者アカウント）</b>
-            <span id="consentAdminId">ID: 1138853755490234478</span>
+            <span id="consentAdminId">ID: —</span>
           </span>
         </button>
       </div>
@@ -997,7 +1019,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <span class="spacer"></span>
           <span class="badge" id="resBadge"><span class="dot"></span>—</span>
         </div>
-        <p class="card-note">Web APIsおよびローカルシステムAPIから実データをリアルタイム取得・可視化しています。</p>
+        <p class="card-note">CPUはブラウザ上のマイクロベンチマークによる推定値、メモリは JS ヒープ使用率、ディスクは Storage API の割当量から算出した目安です。OS の実測値ではありません（API接続先を設定すると、そちらの値で上書きします）。</p>
 
         <div class="gauges" id="gauges"></div>
 
@@ -1015,9 +1037,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         </div>
 
         <div class="meta-row">
-          <span id="hostName">ホスト: nevi-local</span>
-          <span>稼働: <span id="uptime">00:00:00</span></span>
-          <span>プロセス: <span id="procCount">—</span></span>
+          <span id="hostName">実行環境: 判定中…</span>
+          <span>この画面の稼働: <span id="uptime">00:00:00</span></span>
+          <span>実行中タスク: <span id="procCount">—</span></span>
         </div>
       </section>
 
@@ -1111,7 +1133,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <span class="spacer"></span>
           <span class="badge badge-ok" id="guardBadge"><span class="dot"></span>保護中</span>
         </div>
-        <p class="card-note">このダッシュボードの全ルートは Discord OAuth2 の認証と許可IDの照合を通過しないと表示されません。</p>
+        <p class="card-note">全ルートは Discord OAuth2 の認証と許可IDの照合を通過しないと表示されません。ただし判定はブラウザ内で行われるため、表示の制御であってサーバー側のアクセス制御ではありません。</p>
 
         <div class="session-head">
           <img class="avatar" id="guardAvatar" src="" alt="" width="44" height="44">
@@ -1179,10 +1201,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
             Googleカレンダー連携
           </h2>
           <span class="spacer"></span>
-          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>ローカル同期</span>
+          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>この端末に保存</span>
           <button class="btn btn-sm" id="calAddToggle" aria-expanded="false" aria-controls="calForm">予定を追加</button>
         </div>
-        <p class="card-note">スケジューラと双方向同期し、予定の管理と自動通知をローカル環境およびバックエンド API で保持・共有します。</p>
+        <p class="card-note">予定はこのブラウザの LocalStorage に保存され、リロード後も残ります。API接続先を設定した場合のみ、変更内容をそのエンドポイントへ送信します。</p>
 
         <form id="calForm" hidden autocomplete="off"
               style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--card-2)">
@@ -1256,10 +1278,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <div class="field">
             <label for="apiUrl">エンドポイント / Webhook URL</label>
             <div class="inline-input">
-              <input type="password" id="apiUrl" value="http://127.0.0.1:8787/nevi/command" spellcheck="false">
+              <input type="password" id="apiUrl" placeholder="未設定（例: https://api.example.com/nevi/command）" spellcheck="false">
               <button class="btn btn-sm" type="button" data-mask-toggle="apiUrl" aria-pressed="false">表示</button>
             </div>
-            <span class="hint">既定でマスク表示です。「表示」で一時的に平文化します。</span>
+            <span class="hint">既定でマスク表示です。「表示」で一時的に平文化します。未設定の場合、外部への通信は一切行いません。HTTPS で公開している場合、<code>http://</code> の宛先はブラウザが混在コンテンツとしてブロックします。</span>
           </div>
 
           <div class="field">
@@ -1309,6 +1331,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <span class="badge badge-ok" id="authBadge"><span class="dot"></span>認証済み</span>
         </div>
 
+        <p class="card-note">この認証はブラウザ内だけで完結しています。許可リストもセッションもこの端末の LocalStorage にあり、開発者ツールから書き換えれば迂回できます。実際にアクセスを制限したい場合は、サーバー側でトークンを検証する構成が必要です。</p>
+
         <div class="session-head">
           <img class="avatar" id="authAvatar" src="" alt="" width="44" height="44">
           <span class="who">
@@ -1343,7 +1367,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
           <label for="setAllowIds">許可する Discord ユーザーID（ホワイトリスト / 改行・カンマ区切り）</label>
           <textarea id="setAllowIds" rows="3" spellcheck="false"
                     placeholder="000000000000000000"></textarea>
-          <span class="hint">ここに無いIDでログインした場合は、ユーザー情報の取得直後にセッションを破棄してアクセスを拒否します（要差し替え: ご主人さまの実IDを設定）。</span>
+          <span class="hint">ここに無いIDでログインした場合は、ユーザー情報の取得直後にセッションを破棄してアクセスを拒否します。判定はブラウザ内で行われるため、本物のアクセス制御としては機能しません。</span>
         </div>
 
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1409,8 +1433,8 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
   <footer class="foot">
     <span>Nevi Web Center — オーナー（ご主人さま）専用操作コントロールセンター</span>
-    <span>認証: Discord OAuth2 / Owner ID: 1138853755490234478</span>
-    <span id="footNote">⚡ ローカル Nevi 実機連携中（本番リアルタイムデータ連動）</span>
+    <span>認証: Discord OAuth2（identify）/ 許可IDはこの端末にのみ保存されます</span>
+    <span id="footNote">ブラウザ内で完結して動作中（バックエンド未接続）</span>
   </footer>
 </div>
 </div><!-- /#app -->
@@ -1451,6 +1475,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
         settings: state.settings,
         tasks: state.tasks,
         mcp: state.mcp,
+        calendar: state.calendar,
         events: state.events,
         history: state.history,
         theme: state.theme
@@ -1478,19 +1503,30 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     return ymd(d);
   }
 
+  /* 既定値は1か所で定義する（起動時と「保存データを全消去」で必ず一致させる）。
+     許可IDと Client ID は空 = 初回ログイン時に利用者が自分のIDを登録する。 */
+  var DEFAULT_SETTINGS = {
+    poll: 2000,
+    apiUrl: "",
+    apiToken: "",
+    specTimeout: 45,
+    clientId: "",
+    allowIds: ""
+  };
+
   var state = {
     booted: Date.now(),
     emergency: false,
     theme: "auto",
     settings: {
-      poll: 2000,
-      apiUrl: "/api/status",
-      apiToken: "",
-      specTimeout: 45,
-      clientId: "",
-      allowIds: "1138853755490234478"
+      poll: DEFAULT_SETTINGS.poll,
+      apiUrl: DEFAULT_SETTINGS.apiUrl,
+      apiToken: DEFAULT_SETTINGS.apiToken,
+      specTimeout: DEFAULT_SETTINGS.specTimeout,
+      clientId: DEFAULT_SETTINGS.clientId,
+      allowIds: DEFAULT_SETTINGS.allowIds
     },
-    res: { cpu: 22, mem: 46, disk: 63, procs: 184 },
+    res: { cpu: 8, mem: 40, disk: 20, procs: 0 },
     cpuHist: [],
     tasks: [
       { id: "vault-backup",  name: "Obsidian Vault 自動バックアップ", cmd: "/task run vault-backup",
@@ -1539,6 +1575,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     }
     if (Array.isArray(saved.tasks) && saved.tasks.length) state.tasks = saved.tasks;
     if (Array.isArray(saved.mcp) && saved.mcp.length) state.mcp = saved.mcp;
+    if (Array.isArray(saved.calendar)) state.calendar = saved.calendar;
     if (Array.isArray(saved.history) && saved.history.length) state.history = saved.history;
     if (Array.isArray(saved.events)) state.events = saved.events.slice(-200);
     if (saved.theme) state.theme = saved.theme;
@@ -1619,10 +1656,10 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   var AUTH_KEY = "nevi.webcenter.auth.v1";
   var OAUTH_STATE_KEY = "nevi.webcenter.oauth.state";
   var OAUTH_NEXT_KEY = "nevi.webcenter.oauth.next";
+  var OAUTH_STATE_TTL = 10 * 60 * 1000;
   var AUTHORIZE_URL = "https://discord.com/api/oauth2/authorize";
   var USERINFO_URL = "https://discord.com/api/users/@me";
   var DEMO_SESSION_MS = 60 * 60 * 1000;
-  var GUEST_ID = "999999999999999999";
 
   var auth = { user: null, mode: null, expires: 0 };
   var pendingRoute = "";
@@ -1694,18 +1731,29 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     document.body.style.overflow = "hidden";
     showPanel(panel);
 
-    var ids = allowList();
-    $("#gateNext").textContent = pendingRoute || "/dashboard";
-    $("#gateMode").textContent = realMode()
-      ? "認証モード: Discord 実接続（Client ID 設定済み）"
-      : "認証モード: デモ（Client ID 未設定 / 外部通信なし）";
-    $("#gateAllowNote").textContent = "許可されている Discord ID: " +
-      (ids.length ? ids.join(" / ") : "（未設定のため誰もログインできません）");
-    $("#consentAdminId").textContent = "ID: " + (ids[0] || "—");
-    $("#consentAdminAvatar").src = localAvatar({ id: ids[0] || "0", global_name: "ご主人さま" });
-    $("#consentGuestAvatar").src = localAvatar({ id: GUEST_ID, global_name: "ゲストユーザー" });
+    /* 描画中に例外が出てもゲートを無反応にしない: 必ずメッセージ欄に出す */
+    try {
+      var ids = allowList();
+      $("#gateNext").textContent = pendingRoute || "/dashboard";
+      $("#gateMode").textContent = realMode()
+        ? "認証モード: Discord 実接続（Client ID 設定済み）"
+        : "認証モード: デモ（Client ID 未設定 / 外部通信なし）";
+      $("#gateAllowNote").textContent = "許可されている Discord ID: " +
+        (ids.length ? ids.join(" / ") : "（未設定 / 上の入力欄で登録できます）");
+      $("#consentAdminId").textContent = "ID: " + (ids[0] || "—");
+      $("#consentAdminAvatar").src = localAvatar({ id: ids[0] || "0", global_name: "ご主人さま" });
+    } catch (e) {
+      gateMsg.className = "gate-msg err";
+      gateMsg.textContent = "ログイン画面の描画に失敗しました: " + e.message;
+    }
 
-    if (panel === "login") setTimeout(function () { if (!gate.hidden) $("#loginBtn").focus(); }, 30);
+    if (panel === "login") {
+      setTimeout(function () {
+        if (gate.hidden) return;
+        var focusTarget = allowList().length ? $("#loginBtn") : $("#gateAdminIdInput");
+        if (focusTarget) focusTarget.focus();
+      }, 30);
+    }
   }
   function hideGate() {
     gate.hidden = true;
@@ -1734,12 +1782,39 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     return Array.prototype.map.call(a, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
   }
 
+  /* CSRF 用 nonce の保管。
+     sessionStorage はタブ単位のため、スマホで Discord アプリ内ブラウザ →
+     外部ブラウザのようにタブをまたぐと引き継げず state 検証が必ず失敗する。
+     そのため localStorage に有効期限つきで保存する。 */
+  function saveOAuthState(nonce, next) {
+    try {
+      localStorage.setItem(OAUTH_STATE_KEY, JSON.stringify({ nonce: nonce, at: Date.now() }));
+      localStorage.setItem(OAUTH_NEXT_KEY, next);
+      return true;
+    } catch (e) { return false; }
+  }
+  function takeOAuthState() {
+    var out = { nonce: "", next: "", stored: false };
+    try {
+      var raw = localStorage.getItem(OAUTH_STATE_KEY);
+      out.next = localStorage.getItem(OAUTH_NEXT_KEY) || "";
+      localStorage.removeItem(OAUTH_STATE_KEY);
+      localStorage.removeItem(OAUTH_NEXT_KEY);
+      if (!raw) return out;
+      var v = JSON.parse(raw);
+      if (v && v.nonce && Date.now() - v.at < OAUTH_STATE_TTL) {
+        out.nonce = v.nonce;
+        out.stored = true;
+      }
+    } catch (e) { /* 読めない場合は未保存として扱う */ }
+    return out;
+  }
+
   function startRealLogin() {
     var nonce = randomState();
-    try {
-      sessionStorage.setItem(OAUTH_STATE_KEY, nonce);
-      sessionStorage.setItem(OAUTH_NEXT_KEY, pendingRoute || "/dashboard");
-    } catch (e) { /* sessionStorage 不可でも認可自体は続行する */ }
+    if (!saveOAuthState(nonce, pendingRoute || "/dashboard")) {
+      log("warn", "この端末では認証用の一時データを保存できないため、リダイレクト後の state 検証を省略します。");
+    }
     var url = AUTHORIZE_URL +
       "?client_id=" + encodeURIComponent(String(state.settings.clientId).trim()) +
       "&response_type=token&scope=identify&prompt=consent" +
@@ -1751,12 +1826,16 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     location.href = url;
   }
 
-  function demoLogin(kind) {
+  function demoLogin() {
     showPanel("pending");
     $("#pendingText").textContent = "アクセストークンを検証し、ユーザー情報を取得しています（デモ）。";
-    var u = kind === "admin"
-      ? { id: allowList()[0] || "0", username: "nevi.master", global_name: "ご主人さま", avatar: null, demo: true }
-      : { id: GUEST_ID, username: "guest.user", global_name: "ゲストユーザー", avatar: null, demo: true };
+    var u = {
+      id: allowList()[0] || "0",
+      username: "nevi.master",
+      global_name: "ご主人さま",
+      avatar: null,
+      demo: true
+    };
     setTimeout(function () { finishLogin(u, "demo", Date.now() + DEMO_SESSION_MS); }, 480);
   }
 
@@ -1764,16 +1843,19 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     clearDeny();
     gateMsg.className = "gate-msg";
     gateMsg.textContent = "";
-    var inputId = ($("#gateAdminIdInput") ? $("#gateAdminIdInput").value.trim() : "");
+    var idInput = $("#gateAdminIdInput");
+    var inputId = idInput ? idInput.value.trim() : "";
     if (!allowList().length) {
       if (/^\d{5,25}$/.test(inputId)) {
         state.settings.allowIds = inputId;
         persist();
+        syncSettingsInputs();
         log("info", "管理者 Discord ID を設定しました: " + inputId);
       } else {
         gateMsg.className = "gate-msg err";
         gateMsg.textContent = "許可リストが空です。管理者 Discord ユーザーID（数字5〜25桁）を入力してください。";
         log("error", "許可リストが空のためログインを開始できません。");
+        if (idInput) idInput.focus();
         return;
       }
     }
@@ -1781,37 +1863,17 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     $("#consentUrl").textContent =
       "discord.com/oauth2/authorize?client_id=（デモ）&response_type=token&scope=identify";
     showGate("consent");
-  $("#passcodeBtn").addEventListener("click", function () {
-    var code = $("#passcodeInput").value.trim();
-    if (!code) {
-      toast("ワンタイムコードを入力してください", "bad");
-      return;
-    }
-    showPanel("pending");
-    $("#pendingText").textContent = "ワンタイムログインコードを検証中…";
-
-    fetch("/api/auth_code?code=" + encodeURIComponent(code))
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (data.ok && data.user) {
-          finishLogin(data.user, "passcode", Date.now() + 24 * 60 * 60 * 1000);
-        } else {
-          showGate("login");
-          gateMsg.className = "gate-msg err";
-          gateMsg.textContent = data.message || "コードが無効か期限切れです。Discordで /passcode を再発行してください。";
-          toast("認証失敗: " + (data.message || "無効なコード"), "bad");
-        }
-      })
-      ["catch"](function (err) {
-        showGate("login");
-        gateMsg.className = "gate-msg err";
-        gateMsg.textContent = "Nevi サーバーとの通信に失敗しました。";
-        toast("通信エラー", "bad");
-      });
   });
 
-  $("#consentAdmin").addEventListener("click", function () { demoLogin("admin"); });
-  $("#consentGuest").addEventListener("click", function () { demoLogin("guest"); });
+  /* Enter キーでもログインを開始できるようにする（スマホのソフトキーボード対策） */
+  $("#gateAdminIdInput").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      $("#loginBtn").click();
+    }
+  });
+
+  $("#consentAdmin").addEventListener("click", function () { demoLogin(); });
   $("#consentCancel").addEventListener("click", function () {
     showPanel("login");
     log("warn", "認可をキャンセルしました。ログインしていません。");
@@ -2023,13 +2085,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
     oauthBusy = true;
     var p = parseFragment(raw);
-    var expected = "";
-    try {
-      expected = sessionStorage.getItem(OAUTH_STATE_KEY) || "";
-      pendingRoute = sessionStorage.getItem(OAUTH_NEXT_KEY) || "";
-      sessionStorage.removeItem(OAUTH_STATE_KEY);
-      sessionStorage.removeItem(OAUTH_NEXT_KEY);
-    } catch (e) { /* 参照できない場合は state 検証をスキップしない（下で失敗扱い） */ }
+    var saved = takeOAuthState();
+    var expected = saved.nonce;
+    pendingRoute = saved.next;
 
     stripFragment();               // アクセストークンをURLから即座に取り除く
     showGate("pending");
@@ -2048,9 +2106,15 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
       return true;
     }
     if (!p.access_token) { fail("アクセストークンを受け取れませんでした。"); return true; }
-    if (!expected || p.state !== expected) {
+    if (saved.stored && p.state !== expected) {
       fail("state パラメータが一致しないため、認証を中断しました（CSRF 対策）。");
       return true;
+    }
+    if (!saved.stored) {
+      /* 認可の開始と戻りでブラウザが変わった場合など。トークンは検証済みの
+         Discord から直接返るため処理は続行し、検証を省いたことをログに残す。 */
+      log("warn", "認可を開始したブラウザと戻り先が異なるため、state 検証を省略しました。" +
+        "意図しないログイン画面が開いた場合は、このタブを閉じてください。");
     }
     if (!window.fetch) { fail("このブラウザは fetch に対応していないため、ユーザー情報を取得できません。"); return true; }
 
@@ -2127,9 +2191,9 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   };
 
   var GAUGES = [
-    { key: "cpu",  label: "CPU",     unit: "%",  subId: "sub-cpu",  sub: sysHardware.cores + "コア / " + (sysHardware.cores * 2) + "スレッド" },
-    { key: "mem",  label: "MEMORY",  unit: "%",  subId: "sub-mem",  sub: sysHardware.memoryGB + ".0 GB 搭載" },
-    { key: "disk", label: "DISK C:", unit: "%",  subId: "sub-disk", sub: "システムドライブ (Storage API)" }
+    { key: "cpu",  label: "CPU",     unit: "%",  subId: "sub-cpu",  sub: sysHardware.cores + "論理コア（推定）" },
+    { key: "mem",  label: "MEMORY",  unit: "%",  subId: "sub-mem",  sub: "JSヒープ使用率から推定" },
+    { key: "disk", label: "STORAGE", unit: "%",  subId: "sub-disk", sub: "Storage API の割当量に対する使用率" }
   ];
   var R = 42, CIRC = 2 * Math.PI * R;
 
@@ -2189,20 +2253,25 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     }
   }
 
-  /* 実際のブラウザ・システムメトリクスの計測とエンドポイント取得 */
-  var lastTickTime = performance.now();
+  /* ブラウザから取得できる範囲の指標を計測する。
+     いずれも OS の実測値ではなく目安であることに注意（カード内にも明記）。 */
+  var CPU_BENCH_ITER = 40000;   // スマホでも体感に影響しない程度に抑える
+  var cpuBaselineMs = Infinity; // これまでで最も速かった所要時間 = ほぼ無負荷時の基準
+
   function measureSystemMetrics() {
-    // 1. CPU: マイクロベンチマークとメインスレッドのフレーム遅延から実際のCPU負荷率を算定
+    // 1. CPU: 短いベンチマークの所要時間が基準よりどれだけ延びたかで
+    //    メインスレッドの混み具合を相対評価する
     var t0 = performance.now();
     var sum = 0;
-    for (var i = 0; i < 300000; i++) sum += Math.sqrt(i);
+    for (var i = 0; i < CPU_BENCH_ITER; i++) sum += Math.sqrt(i);
     var elapsed = performance.now() - t0;
-    var timeDelta = performance.now() - lastTickTime;
-    lastTickTime = performance.now();
+    if (elapsed > 0 && elapsed < cpuBaselineMs) cpuBaselineMs = elapsed;
+
+    var ratio = cpuBaselineMs > 0 && isFinite(cpuBaselineMs) ? elapsed / cpuBaselineMs : 1;
 
     // タスク実行負荷の重み
     var runningTasks = state.tasks.filter(function (t) { return t.status === "running"; }).length;
-    var calcCpu = Math.round(Math.min(95, Math.max(5, (elapsed * 6) + (runningTasks * 12))));
+    var calcCpu = Math.round(Math.min(95, Math.max(5, 8 + (ratio - 1) * 55 + (runningTasks * 12))));
 
     // 2. メモリ: Performance API / deviceMemory からの実際の使用率
     var memPct = 45;
@@ -2228,19 +2297,22 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
 
     var hostElem = $("#hostName");
     if (hostElem) {
-      var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "Local System";
-      hostElem.textContent = "ホスト: nevi-local (" + platform + ")";
+      var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "不明";
+      hostElem.textContent = "実行環境: " + platform + " のブラウザ";
     }
 
     var subCpu = $("#sub-cpu");
-    if (subCpu) subCpu.textContent = sysHardware.cores + "コア / " + (sysHardware.cores * 2) + "スレッド (" + (elapsed.toFixed(1)) + "ms)";
+    if (subCpu) subCpu.textContent = sysHardware.cores + "論理コア / ベンチ " + elapsed.toFixed(1) + "ms（推定）";
 
     var subMem = $("#sub-mem");
-    if (subMem) subMem.textContent = sysHardware.memoryGB + ".0 GB 搭載 (Web API検出)";
+    if (subMem) {
+      subMem.textContent = (navigator.deviceMemory ? sysHardware.memoryGB + " GB 以上を検出" : "搭載量は非公開")
+        + " / JSヒープ比";
+    }
 
     state.res.cpu = clamp(calcCpu, 4, 98);
     state.res.mem = clamp(memPct, 15, 95);
-    state.res.procs = Math.round(160 + (runningTasks * 8) + (state.res.cpu * 0.4));
+    state.res.procs = runningTasks;
   }
 
   function tickResources() {
@@ -2256,7 +2328,6 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
             state.res.cpu = Math.round(data.cpu);
             if (typeof data.mem === "number") state.res.mem = Math.round(data.mem);
             if (typeof data.disk === "number") state.res.disk = Math.round(data.disk);
-            if (typeof data.procs === "number") state.res.procs = Math.round(data.procs);
           }
         })["catch"](function () { /* ローカルAPI未接続時はブラウザ実測定値を使用 */ });
     }
@@ -2322,12 +2393,11 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     persist();
     if (!window.fetch || !state.settings.apiUrl) return;
     var syncUrl = state.settings.apiUrl.replace(/\/nevi\/command$/, "/api/" + domain);
+    var headers = { "Content-Type": "application/json" };
+    if (state.settings.apiToken) headers.Authorization = "Bearer " + state.settings.apiToken;
     fetch(syncUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": state.settings.apiToken ? "Bearer " + state.settings.apiToken : ""
-      },
+      headers: headers,
       body: JSON.stringify({ domain: domain, action: action, data: itemData, timestamp: Date.now() })
     }).then(function (res) {
       if (res.ok) log("info", "[" + domain + "] REST API / バックエンドデータソースへの双方向同期を完了しました (" + action + ")。");
@@ -3068,12 +3138,12 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
   $("#clearAll").addEventListener("click", function () {
     try { localStorage.removeItem(LS_KEY); } catch (e) { /* 保存不可環境では無視 */ }
     state.settings = {
-      poll: 2000,
-      apiUrl: "http://127.0.0.1:8787/nevi/command",
-      apiToken: "",
-      specTimeout: 45,
-      clientId: "",
-      allowIds: "108927491234567890"
+      poll: DEFAULT_SETTINGS.poll,
+      apiUrl: DEFAULT_SETTINGS.apiUrl,
+      apiToken: DEFAULT_SETTINGS.apiToken,
+      specTimeout: DEFAULT_SETTINGS.specTimeout,
+      clientId: DEFAULT_SETTINGS.clientId,
+      allowIds: DEFAULT_SETTINGS.allowIds
     };
     syncSettingsInputs();
     restartResTimer();
@@ -3119,8 +3189,7 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mute
     applyTheme();
     syncSettingsInputs();
 
-    for (var i = 0; i < 30; i++) state.cpuHist.push(clamp(20 + Math.random() * 22, 4, 97));
-
+    /* 履歴は実際の計測でのみ埋める（起動直後はグラフが伸びていく） */
     renderResources();
     renderTasks();
     renderHistory();

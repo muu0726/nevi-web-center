@@ -1,4 +1,10 @@
 {
+  "name": "nevi-web-center",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "serve": "npx http-server ./ -p 8080 -c-1"
+  },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "playwright": "^1.62.1"

@@ -1,32 +1,26 @@
-            # 編集・更新依頼: nevi-web-center
+# 編集・更新依頼: nevi-web-center
 
-            ネヴィがご主人さまから受け取った要件です。
+ネヴィがご主人さまから受け取った要件です。
 
-            ## 変更要件
+## 変更要件
 
-            問題点
-- **[重大度: 高] BUILD_PROMPT.md の主要要件「実データ・実API連携」の未対応と偽装ロジックの残留**（該当ファイル: [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L998-L1000), [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L1180-L1182), [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L2160-L2223)）
-  `BUILD_PROMPT.md` の要求「モックデータで実装されている部分を、実際のデータ・API連携に置き換えて本実装にしてください」に対し、CPU負荷等はマイクロベンチマークおよび `Math.sin()` 等による疑似計算が大半を占めており、バックエンド API 同期も通信失敗を無言でキャッチして LocalStorage / デモデータで動作させている。また、UI上の注記文章（「ローカル生成のシミュレーション値を2秒ごとに更新しています（要差し替え）」「OAuth未接続のため、予定はブラウザ内のみに保存される疑似データです（要差し替え）」など）が削除されずに残っている。
-- **[重大度: 高] デフォルトの管理者許可リストにダミーIDがハードコードされているセキュリティ上の問題**（該当ファイル: [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L1490), [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L1633-L1639)）
-  `state.settings.allowIds` の初期値としてダミーID `"108927491234567890"` が設定されており、デフォルトのデモモード状態では「ご主人さま（管理者アカウント）」ボタンを押すだけで実際の認証を経ずに誰でも管理者ダッシュボードへアクセスできる。
-- **[重大度: 中] REST API / Webhook 送信シミュレータが外部通信を一切行わない疑似実装にとどまっている**（該当ファイル: [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L1235-L1236), [index.html](file:///C:/Users/umuta/AppData/Local/Temp/nevi-qa-pscj4_0i/index.html#L2918-L2955)）問題点の修正
-  シミュレータ画面からの送信実行時、`fetch` や `XMLHttpRequest` 等の外部リクエストを発行せず、`setTimeout` により固定のダミー成功レスポンス JSON を表示する仕様になっている
+- **[重大度: 高] `#loginBtn` のクリックハンドラが閉じられておらず、スクリプト全体が構文的に閉じない**（`index.html:1763`、`index.html:1784`、`index.html:3158`）   `$("#loginBtn").addEventListener("click", function () {` が1763行で開き、1783行 `showGate("consent");` の直後に閉じ括弧 `});` が無いまま1784行で `$("#passcodeBtn").addEventListener(...)` が始まっている（1784行のインデントは2スペースで、トップレベルに置く意図だったことが読み取れる）。以降3157行まで対応する閉じ括弧が現れず、3158行の `})();` は IIFE ではなくこのハンドラを閉じる形になるため、括弧の対応が最後まで揃わない。結果として `<script>` 全体が評価されず、ゲートの各ボタン（Discordログイン／コードで認証／認可）はどれも反応せず、`#app` は `hidden` のまま（`index.html:906`）＝**ダッシュボードへ遷移しない**。重点観点の症状と直接一致する（スマホ限定ではなくPCでも同様のはず）。※ブラウザで実行しての確認は行っていない（未確認） - **[重大度: 高] スマホ用ワンタイムコードのリスナーが Discord ログインボタンのハンドラ内に入れ子になっている**（`index.html:1784-1811`）   上記の構文問題を仮に解消しても、`#passcodeBtn` のクリックリスナーは `#loginBtn` がクリックされた時点で初めて登録される（かつクリックのたびに多重登録される）。ログイン画面を開いて直接「コードで認証」を押すスマホの導線では何も起きない。 - **[重大度: 高] 存在しない要素 `#consentGuest` / `#consentGuestAvatar` を参照している**（`index.html:1706`、`index.html:1814`）   `panelConsent` には `#consentAdmin` と `#consentCancel` しかなく（`index.html:868-894`）、ゲスト用のボタン・アバターは HTML に無い。`showGate()` は1706行で `null.src` となり、ゲートを表示するたびに TypeError で中断する（フォーカス設定に到達しない）。1814行も `null.addEventListener` になる。`demoLogin("guest")`（`index.html:1754-1761`）と `GUEST_ID`（`index.html:1625`）は到達不能なデッドコード。 - **[重大度: 高] ワンタイムコード認証のエンドポイント `/api/auth_code` は公開先（GitHub Pages）に存在しない**（`index.html:1793`、`.nevi/metadata.json:2`）   同一オリジンの相対パスへ `fetch` しており、静的ホスティングでは 404 が返る。404 の本文は JSON ではないため `res.json()` が例外になり `catch` へ入り、「Nevi サーバーとの通信に失敗しました」で必ず失敗する。スマホからのログイン導線として用意された機能が、この構成では原理的に成立しない。 - **[重大度: 高] Discord 実接続モードでも、スマホでは `state` 検証に失敗し得る**（`index.html:1737-1752`、`index.html:2020-2055`）   CSRF 用 nonce を `sessionStorage` に保存し、リダイレクト帰還後に照合する実装。Discord アプリ内ブラウザから外部ブラウザへ遷移して戻るなど、認可前後でブラウザ／タブが変わると `sessionStorage` を引き継げず、`expected` が空になって「state パラメータが一致しないため、認証を中断しました」で必ず失敗する。※実機での再現は未確認 - **[重大度: 高] 認証・認可がすべてクライアント側で完結しており、迂回できる**（`index.html:1634-1640`、`index.html:1666-1681`）   許可IDリストは LocalStorage 上の `state.settings.allowIds`、セッションは `nevi.webcenter.auth.v1` に平文保存。DevTools からこれらを書き換えれば任意のユーザーが「認証済み」状態を作れる。加えて既定はデモモード（Client ID 未設定）で、認可画面の「ご主人さま」ボタンを押すだけで管理者としてログインできる（`index.html:1754-1761`, `1813`）。前回QA（`.nevi/QA_REPORT.md:61-62`）で指摘された構造がそのまま残っている。 - **[重大度: 高] 実在すると見られる Discord ユーザーIDがハードコードされ、公開ページのフッタにも平文表示される**（`index.html:1491`、`index.html:1412`、`index.html:885`）   既定の許可IDが `"1138853755490234478"`、フッタに `認証: Discord OAuth2 / Owner ID: 1138853755490234478` と常時表示。`implementation_plan.md:13` と `walkthrough.md:17` は「デフォルトを空にした」と報告しているが、実装は空になっていない（別のIDに置き換わっただけ）。
 
-            ## 実装ルール
+## 実装ルール
 
-            - 静的Webサイトとして実装・更新する
-            - `index.html` を必ずプロジェクトルートに置く
-            - 外部CDN・外部フォント・外部スタイルシートを使わない（自己完結させる）
-              画像は inline SVG か data: URI で埋め込む
-            - レスポンシブにする。スマホで横スクロールが発生してはいけない
-            - `prefers-color-scheme` でライト/ダーク両対応にする
-            - セマンティックなHTMLと十分なコントラストを確保する
-            - ダミーテキスト（lorem ipsum）ではなく、意味のある実際の文章を書く
-            - ファイル数は必要最小限にする
-            - 実在の人物・団体について事実を捏造しない
-            - ブラウザ自動テスト・動作確認を必ず実施する（Playwright/Puppeteer/ローカル開発サーバー等で実際に表示・クリック・JS例外エラー等のコンソールチェックを行い、正常動作を確認して完了すること）
+- 静的Webサイトとして実装・更新する
+- `index.html` を必ずプロジェクトルートに置く
+- 外部CDN・外部フォント・外部スタイルシートを使わない（自己完結させる）
+  画像は inline SVG か data: URI で埋め込む
+- レスポンシブにする。スマホで横スクロールが発生してはいけない
+- `prefers-color-scheme` でライト/ダーク両対応にする
+- セマンティックなHTMLと十分なコントラストを確保する
+- ダミーテキスト（lorem ipsum）ではなく、意味のある実際の文章を書く
+- ファイル数は必要最小限にする
+- 実在の人物・団体について事実を捏造しない
+- ブラウザ自動テスト・動作確認を必ず実施する（Playwright/Puppeteer/ローカル開発サーバー等で実際に表示・クリック・JS例外エラー等のコンソールチェックを行い、正常動作を確認して完了すること）
 
-            ---
+---
 
-            完成したら Discord で `/deploy nevi-web-center` を実行すると、
-            ネヴィが GitHub にリポジトリを作って公開まで進めます。
+完成したら Discord で `/deploy nevi-web-center` を実行すると、
+ネヴィが GitHub にリポジトリを作って公開まで進めます。

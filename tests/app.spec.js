@@ -1,143 +1,156 @@
 const { test, expect } = require('@playwright/test');
 
-test.describe('Nevi Web Center E2E & Console Verification', () => {
-  let jsExceptions = [];
+const OWNER_ID = '000000000000000001';
 
-  test.beforeEach(({ page }) => {
-    jsExceptions = [];
-    page.on('console', msg => {
-      // ネットワーク接続拒否(オプショナルローカルバックエンド試行)以外のJSエラーを記録
-      if (msg.type() === 'error' && !msg.text().includes('ERR_CONNECTION_REFUSED') && !msg.text().includes('Failed to load resource')) {
-        jsExceptions.push(`[Console Error] ${msg.text()}`);
-      }
-    });
-    page.on('pageerror', err => {
-      jsExceptions.push(`[JS Exception] ${err.message}`);
-    });
+/**
+ * ページ内で発生した JS 例外・コンソールエラーを1件も見逃さずに集める。
+ * 静的サイトとして自己完結しているため、除外条件は設けない
+ * （外部リクエストが発生した時点でそれ自体が不具合）。
+ */
+function collectErrors(page) {
+  const errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(`[Console Error] ${msg.text()}`);
+  });
+  page.on('pageerror', err => errors.push(`[JS Exception] ${err.message}`));
+  page.on('requestfailed', req => errors.push(`[Request Failed] ${req.url()}`));
+  return errors;
+}
+
+/** 許可IDの入力 → ログイン → 認可 までを通してダッシュボードに入る */
+async function signIn(page) {
+  await page.fill('#gateAdminIdInput', OWNER_ID);
+  await page.click('#loginBtn');
+  await expect(page.locator('#panelConsent')).toBeVisible();
+  await page.click('#consentAdmin');
+  await expect(page.locator('#app')).toBeVisible();
+}
+
+test.describe('Nevi Web Center', () => {
+  let errors;
+
+  test.beforeEach(async ({ page }) => {
+    errors = collectErrors(page);
   });
 
-  test('Title and Login Security Gate verification', async ({ page }) => {
-    await page.goto('http://localhost:8080/');
+  test.afterEach(() => {
+    expect(errors).toEqual([]);
+  });
 
-    // Title check
+  test('未認証ではゲートが表示され、許可IDが空だとログインできない', async ({ page }) => {
+    await page.goto('/');
+
     await expect(page).toHaveTitle(/Nevi Web Center/);
+    await expect(page.locator('#gate')).toBeVisible();
+    await expect(page.locator('#app')).toBeHidden();
 
-    // Gate should be visible initially (unauthenticated)
-    const gate = page.locator('#gate');
-    await expect(gate).toBeVisible();
+    // 既定の許可リストは空。ハードコードされたIDが残っていないこと
+    await expect(page.locator('#gateAllowNote')).toContainText('未設定');
+    await expect(page.locator('#gateAdminIdInput')).toHaveValue('');
 
-    // Clicking login without ID shows error
+    // ID未入力のままログインするとエラーになり、ゲートは開かない
     await page.click('#loginBtn');
     await expect(page.locator('#gateMsg')).toContainText('許可リストが空です');
+    await expect(page.locator('#app')).toBeHidden();
 
-    // Inputting valid ID and clicking login opens consent panel
-    await page.fill('#gateAdminIdInput', '108927491234567890');
-    await page.click('#loginBtn');
-    await expect(page.locator('#panelConsent')).toBeVisible();
-
-    // Verify zero JS exceptions
-    expect(jsExceptions).toEqual([]);
+    // ゲートには「セキュリティ境界ではない」旨の明示がある
+    await expect(page.locator('.gate-note')).toContainText('セキュリティ境界ではありません');
   });
 
-  test('Admin OAuth Login, Dashboard UI, System Metrics & CRUD Operations', async ({ page }) => {
-    await page.goto('http://localhost:8080/');
+  test('ログイン → ダッシュボード遷移と主要機能の操作', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
 
-    // Perform Admin Login with ID input
-    await page.fill('#gateAdminIdInput', '108927491234567890');
-    await page.click('#loginBtn');
-    await page.click('#consentAdmin');
+    await expect(page.locator('#chipName')).toContainText('ご主人さま');
+    await expect(page.locator('#chipId')).toContainText(OWNER_ID);
+    await expect(page.locator('#viewDashboard')).toBeVisible();
 
-    // Dashboard should become visible
-    const app = page.locator('#app');
-    await expect(app).toBeVisible();
+    // ゲージが実測値で更新される
+    await expect(page.locator('#val-cpu')).not.toHaveText('--');
+    await expect(page.locator('#val-mem')).not.toHaveText('--');
+    await expect(page.locator('#val-disk')).not.toHaveText('--');
 
-    // Check Identity Chip in header
-    const chipName = page.locator('#chipName');
-    await expect(chipName).toContainText('ご主人さま');
-
-    // Verify PC Resource Gauges are rendered
-    const valCpu = page.locator('#val-cpu');
-    const valMem = page.locator('#val-mem');
-    const valDisk = page.locator('#val-disk');
-
-    await expect(valCpu).not.toHaveText('--');
-    await expect(valMem).not.toHaveText('--');
-    await expect(valDisk).not.toHaveText('--');
-
-    // Navigate to Tasks and Calendar tab
+    // タスク実行 → 履歴に反映
     await page.click('a[data-route="tasks"]');
     await expect(page.locator('#viewTasks')).toBeVisible();
+    await page.click('button[data-act="run"][data-id="vault-backup"]');
+    await expect(page.locator('#historyList')).toContainText('Obsidian Vault', { timeout: 15000 });
 
-    // Test Task Execution
-    const runBtn = page.locator('button[data-act="run"][data-id="vault-backup"]');
-    await runBtn.click();
-    await page.waitForTimeout(1000);
-
-    // Check Task History updated
-    const historyList = page.locator('#historyList');
-    await expect(historyList).toContainText('Obsidian Vault');
-
-    // Test Calendar Event Addition
+    // カレンダー: 追加 → 永続化 → 削除
     await page.click('#calAddToggle');
     await page.fill('#calTitleInput', 'E2E 自動テストによる予定追加');
     await page.fill('#calWhere', '自動テスト環境');
     await page.click('#calSubmit');
+    await expect(page.locator('#calList')).toContainText('E2E 自動テストによる予定追加');
 
-    const calList = page.locator('#calList');
-    await expect(calList).toContainText('E2E 自動テストによる予定追加');
+    await page.reload();
+    await expect(page.locator('#app')).toBeVisible();
+    await page.click('a[data-route="tasks"]');
+    await expect(page.locator('#calList')).toContainText('E2E 自動テストによる予定追加');
 
-    // Test Calendar Event Deletion
-    const delBtn = page.locator('button[data-cal-del]').last();
-    await delBtn.click();
+    await page.locator('button[data-cal-del]').last().click();
 
-    // Navigate to Console / REST API client view
+    // コンソール / 設定ビュー
     await page.click('a[data-route="console"]');
     await expect(page.locator('#viewConsole')).toBeVisible();
+    await expect(page.locator('#setAllowIds')).toHaveValue(OWNER_ID);
 
-    // Test REST API client form submission
-    await page.click('#apiSubmit');
-    await page.waitForTimeout(500);
+    // テーマ切替
+    await page.click('#themeBtn');
+    expect(await page.getAttribute('html', 'data-theme')).toBeTruthy();
 
-    // Verify Theme Switching
-    const themeBtn = page.locator('#themeBtn');
-    await themeBtn.click();
-    const htmlTheme = await page.getAttribute('html', 'data-theme');
-    expect(htmlTheme).toBeTruthy();
-
-    // Verify zero JS exceptions
-    expect(jsExceptions).toEqual([]);
+    // ログアウトするとゲートに戻る
+    await page.click('#logoutBtn');
+    await expect(page.locator('#gate')).toBeVisible();
+    await expect(page.locator('#app')).toBeHidden();
   });
 
-  test('Mobile Responsive Viewport Verification (No Horizontal Scroll)', async ({ page }) => {
+  test('スマホ幅でもログインでき、横スクロールが発生しない', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('http://localhost:8080/');
+    await page.goto('/');
 
-    // Log in
-    await page.fill('#gateAdminIdInput', '108927491234567890');
-    await page.click('#loginBtn');
-    await page.click('#consentAdmin');
+    const overflows = () => page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
 
-    // Verify no horizontal overflow on Dashboard view
-    let hasHorizontalOverflow = await page.evaluate(() => {
-      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+    // ゲート表示中から横スクロールが無いこと
+    expect(await overflows()).toBe(false);
+
+    await signIn(page);
+
+    for (const route of ['dashboard', 'tasks', 'console']) {
+      await page.click(`a[data-route="${route}"]`);
+      await expect(page.locator(`#view${route[0].toUpperCase()}${route.slice(1)}`)).toBeVisible();
+      expect(await overflows()).toBe(false);
+    }
+  });
+
+  test('セッションはリロード後も維持され、未認証では直接アクセスできない', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
+
+    await page.reload();
+    await expect(page.locator('#app')).toBeVisible();
+    await expect(page.locator('#gate')).toBeHidden();
+
+    // セッションが失われた状態で保護ビューを直接開くとゲートへ戻される
+    await page.goto('/#/console');
+    await page.evaluate(() => localStorage.removeItem('nevi.webcenter.auth.v1'));
+    await page.reload();
+    await expect(page.locator('#gate')).toBeVisible();
+    await expect(page.locator('#viewConsole')).toBeHidden();
+  });
+
+  test('外部ホストへのリクエストを一切行わない（自己完結）', async ({ page }) => {
+    const external = [];
+    page.on('request', req => {
+      if (!req.url().startsWith('http://localhost:8080/')) external.push(req.url());
     });
-    expect(hasHorizontalOverflow).toBe(false);
 
-    // Check Tasks view responsive overflow
-    await page.click('a[data-route="tasks"]');
-    hasHorizontalOverflow = await page.evaluate(() => {
-      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
-    });
-    expect(hasHorizontalOverflow).toBe(false);
+    await page.goto('/');
+    await signIn(page);
+    await page.waitForTimeout(1500);
 
-    // Check Console view responsive overflow
-    await page.click('a[data-route="console"]');
-    hasHorizontalOverflow = await page.evaluate(() => {
-      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
-    });
-    expect(hasHorizontalOverflow).toBe(false);
-
-    expect(jsExceptions).toEqual([]);
+    expect(external).toEqual([]);
   });
 });
-
