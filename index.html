@@ -1,0 +1,2177 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Nevi Web Center — ネヴィ統合監視ダッシュボード</title>
+<meta name="description" content="PCリソース・自動化タスク・カレンダー・MCP接続をブラウザから監視／操作するローカル完結型ダッシュボード。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f172a'/%3E%3Cpath d='M9 23V9l14 14V9' fill='none' stroke='%2338bdf8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   Nevi Web Center — 単一ファイル完結スタイル
+   外部CDN／外部フォント／外部画像は一切使用しない
+   ============================================================ */
+
+:root {
+  --bg:        #0f172a;
+  --bg-deep:   #0b1220;
+  --card:      #1e293b;
+  --card-2:    #172033;
+  --line:      #334155;
+  --fg:        #e2e8f0;
+  --fg-strong: #f8fafc;
+  --muted:     #94a3b8;
+  --accent:    #38bdf8;
+  --accent-ink:#082f49;
+  --ok:        #22c55e;
+  --warn:      #fbbf24;
+  --bad:       #ef4444;
+  --shadow:    0 8px 24px rgba(0,0,0,.45);
+  --glow:      0 0 0 1px rgba(56,189,248,.45), 0 8px 28px rgba(56,189,248,.18);
+  --radius:    14px;
+  --font: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN",
+          "Yu Gothic UI", Meiryo, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas,
+          "Courier New", monospace;
+}
+
+/* ライトモード: OS設定に追従（手動トグルが未指定のときのみ） */
+@media (prefers-color-scheme: light) {
+  html[data-theme="auto"] {
+    --bg:        #eef2f7;
+    --bg-deep:   #e2e8f0;
+    --card:      #ffffff;
+    --card-2:    #f1f5f9;
+    --line:      #cbd5e1;
+    --fg:        #1e293b;
+    --fg-strong: #0f172a;
+    --muted:     #475569;
+    --accent:    #0369a1;
+    --accent-ink:#e0f2fe;
+    --ok:        #15803d;
+    --warn:      #a16207;
+    --bad:       #b91c1c;
+    --shadow:    0 6px 18px rgba(15,23,42,.12);
+    --glow:      0 0 0 1px rgba(3,105,161,.45), 0 8px 24px rgba(3,105,161,.14);
+  }
+}
+/* 手動でライトを選んだ場合 */
+html[data-theme="light"] {
+  --bg:        #eef2f7;
+  --bg-deep:   #e2e8f0;
+  --card:      #ffffff;
+  --card-2:    #f1f5f9;
+  --line:      #cbd5e1;
+  --fg:        #1e293b;
+  --fg-strong: #0f172a;
+  --muted:     #475569;
+  --accent:    #0369a1;
+  --accent-ink:#e0f2fe;
+  --ok:        #15803d;
+  --warn:      #a16207;
+  --bad:       #b91c1c;
+  --shadow:    0 6px 18px rgba(15,23,42,.12);
+  --glow:      0 0 0 1px rgba(3,105,161,.45), 0 8px 24px rgba(3,105,161,.14);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { max-width: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 背景のグリッド演出（CSSのみ） */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(transparent 95%, color-mix(in srgb, var(--accent) 12%, transparent) 100%),
+    linear-gradient(90deg, transparent 95%, color-mix(in srgb, var(--accent) 12%, transparent) 100%);
+  background-size: 48px 48px;
+  opacity: .5;
+}
+
+h1, h2, h3 { line-height: 1.35; color: var(--fg-strong); margin: 0; }
+p { margin: 0 0 .6em; }
+a { color: var(--accent); }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 clamp(12px, 3vw, 28px) 64px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- ヘッダ ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 10px clamp(12px, 3vw, 28px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand svg { flex: none; }
+.brand-text { min-width: 0; }
+.brand-text h1 { font-size: clamp(1rem, 2.6vw, 1.2rem); letter-spacing: .04em; }
+.brand-text small { color: var(--muted); font-size: .72rem; letter-spacing: .12em; }
+
+.topbar-tools {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.clock {
+  font-family: var(--mono);
+  font-size: .82rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ---------- ボタン ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 13px;
+  min-height: 38px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: .84rem;
+  font-weight: 600;
+  transition: background .15s, border-color .15s, transform .1s, box-shadow .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card-2)); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .42; cursor: not-allowed; }
+.btn[disabled]:hover { border-color: var(--line); background: var(--card-2); }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 82%, #fff); border-color: var(--accent); }
+.btn-danger { border-color: var(--bad); color: var(--bad); }
+.btn-danger:hover { background: color-mix(in srgb, var(--bad) 16%, var(--card-2)); border-color: var(--bad); }
+.btn-sm { min-height: 32px; padding: 4px 10px; font-size: .78rem; }
+.btn-block { width: 100%; }
+
+/* ---------- カード ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: box-shadow .2s, border-color .2s, transform .2s;
+  min-width: 0;
+}
+.card:hover, .card:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: var(--glow);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+.card-head h2 { font-size: .98rem; letter-spacing: .03em; display: flex; align-items: center; gap: 8px; }
+.card-head .spacer { margin-left: auto; }
+.card-note { color: var(--muted); font-size: .78rem; margin: 0 0 10px; }
+
+/* ---------- バッジ ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.badge-ok   { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.badge-warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.badge-bad  { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.badge-idle { color: var(--muted); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.badge-run  { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.badge-run .dot { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+
+/* ---------- レイアウト ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+@media (min-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); }
+}
+.col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+
+/* ---------- 緊急バナー ---------- */
+.emergency-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--bad);
+  background: color-mix(in srgb, var(--bad) 16%, var(--card));
+  color: var(--fg-strong);
+  font-weight: 600;
+}
+body.is-emergency .emergency-banner { display: flex; }
+.emergency-banner .spacer { margin-left: auto; }
+
+/* ---------- リソースゲージ ---------- */
+.gauges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 12px;
+}
+.gauge {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 8px 10px;
+  text-align: center;
+  min-width: 0;
+}
+.gauge svg { display: block; margin: 0 auto; width: 100%; max-width: 116px; height: auto; }
+.gauge-value { font-family: var(--mono); font-size: 1.35rem; font-weight: 700; fill: var(--fg-strong); }
+.gauge-unit  { font-family: var(--mono); font-size: .58rem; fill: var(--muted); }
+.gauge-arc   { transition: stroke-dashoffset .6s ease, stroke .3s ease; }
+.gauge-label { font-size: .78rem; font-weight: 700; letter-spacing: .06em; margin-top: 4px; color: var(--fg-strong); }
+.gauge-sub   { font-size: .7rem; color: var(--muted); font-family: var(--mono); }
+
+.spark-wrap {
+  margin-top: 12px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px 6px;
+}
+.spark-wrap h3 { font-size: .76rem; color: var(--muted); letter-spacing: .08em; font-weight: 700; }
+.spark { display: block; width: 100%; height: 68px; margin-top: 4px; }
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 10px;
+  font-size: .76rem;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* ---------- タスク ---------- */
+.task {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-2);
+  padding: 11px 12px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.task + .task { margin-top: 10px; }
+.task-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.task-name { font-weight: 700; color: var(--fg-strong); font-size: .9rem; overflow-wrap: anywhere; }
+.task-cmd  { font-family: var(--mono); font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
+.task-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--ok)));
+  transition: width .4s ease;
+}
+.task.is-error { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
+
+.history {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.hist-card {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ok);
+  border-radius: 10px;
+  background: var(--card-2);
+  padding: 9px 11px;
+  font-size: .78rem;
+  min-width: 0;
+}
+.hist-card.bad { border-left-color: var(--bad); }
+.hist-card.warn { border-left-color: var(--warn); }
+.hist-card strong { display: block; color: var(--fg-strong); font-size: .82rem; overflow-wrap: anywhere; }
+.hist-card time { color: var(--muted); font-family: var(--mono); font-size: .72rem; }
+
+/* ---------- カレンダー ---------- */
+.cal-list { display: grid; gap: 9px; }
+.cal-item {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-2);
+  padding: 9px 11px;
+  min-width: 0;
+}
+.cal-time {
+  font-family: var(--mono);
+  font-size: .76rem;
+  color: var(--accent);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+}
+.cal-title { font-weight: 600; font-size: .86rem; color: var(--fg-strong); overflow-wrap: anywhere; }
+.cal-where { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* ---------- フォーム ---------- */
+.field { display: grid; gap: 4px; margin-bottom: 10px; min-width: 0; }
+.field > label { font-size: .76rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.field .hint { font-size: .72rem; color: var(--muted); }
+input[type="text"], input[type="url"], input[type="password"], input[type="number"],
+input[type="date"], input[type="time"], select, textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 10px;
+  min-height: 38px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  color: var(--fg-strong);
+  font-size: .84rem;
+}
+textarea { font-family: var(--mono); font-size: .78rem; resize: vertical; line-height: 1.6; }
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 85%, transparent); }
+.row2 { display: grid; grid-template-columns: minmax(0,1fr); gap: 0 10px; }
+@media (min-width: 520px) { .row2 { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } }
+.inline-input { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.inline-input input { flex: 1 1 auto; min-width: 0; }
+
+/* ---------- MCP ---------- */
+.mcp-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-2);
+  padding: 11px 12px;
+  min-width: 0;
+}
+.mcp-item + .mcp-item { margin-top: 10px; }
+.mcp-top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.mcp-name { font-weight: 700; color: var(--fg-strong); font-size: .88rem; }
+.mcp-endpoint { font-family: var(--mono); font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+.mcp-params { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.mcp-item.open .mcp-params { display: block; }
+
+/* トグルスイッチ */
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin-left: auto; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track {
+  width: 44px; height: 24px; border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  border: 1px solid var(--line);
+  position: relative; transition: background .2s, border-color .2s; flex: none;
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--fg-strong); transition: transform .2s;
+}
+.switch input:checked + .track { background: color-mix(in srgb, var(--ok) 70%, transparent); border-color: var(--ok); }
+.switch input:checked + .track::after { transform: translateX(20px); }
+.switch input:focus-visible + .track { outline: 3px solid var(--accent); outline-offset: 2px; }
+.switch .label { font-size: .76rem; color: var(--muted); font-weight: 700; min-width: 3.2em; }
+
+/* ---------- spec 診断 ---------- */
+.alert {
+  display: flex; gap: 10px; align-items: flex-start;
+  border-radius: 11px; padding: 10px 12px; font-size: .82rem;
+  border: 1px solid var(--bad);
+  background: color-mix(in srgb, var(--bad) 13%, transparent);
+  margin-bottom: 12px;
+}
+.alert.ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+.alert svg { flex: none; margin-top: 2px; }
+.alert strong { display: block; color: var(--fg-strong); }
+
+.code-out {
+  font-family: var(--mono);
+  font-size: .75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  max-height: 260px;
+  overflow-y: auto;
+  color: var(--fg);
+  margin: 0;
+}
+
+/* ---------- ログ ---------- */
+.log-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.log-view {
+  font-family: var(--mono);
+  font-size: .75rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px;
+}
+.log-line {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+  overflow-wrap: anywhere;
+}
+.log-time { color: var(--muted); }
+.log-lv { font-weight: 700; }
+.lv-info  { color: var(--accent); }
+.lv-ok    { color: var(--ok); }
+.lv-warn  { color: var(--warn); }
+.lv-error { color: var(--bad); }
+
+/* ---------- PINゲート ---------- */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--bg);
+}
+.gate[hidden] { display: none; }
+.gate-box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.gate-box h2 { font-size: 1.05rem; margin-bottom: 6px; }
+.gate-box p { color: var(--muted); font-size: .8rem; }
+.pin-input {
+  width: 100%;
+  text-align: center;
+  letter-spacing: .5em;
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  padding: 10px;
+  margin: 10px 0 6px;
+}
+.gate-msg { min-height: 1.4em; font-size: .78rem; font-weight: 700; }
+.gate-msg.err { color: var(--bad); }
+.gate-msg.ok { color: var(--ok); }
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.keypad button { min-height: 46px; font-family: var(--mono); font-size: 1rem; }
+
+/* ---------- トースト ---------- */
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: grid;
+  gap: 8px;
+  width: min(420px, calc(100vw - 24px));
+  pointer-events: none;
+}
+.toast {
+  background: var(--card);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: .82rem;
+  box-shadow: var(--shadow);
+  animation: toastin .25s ease;
+  overflow-wrap: anywhere;
+}
+.toast.bad { border-color: var(--bad); }
+.toast.ok  { border-color: var(--ok); }
+@keyframes toastin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- フッタ ---------- */
+.foot {
+  margin-top: 26px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .76rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+/* 狭い画面ではプロンプト欄・ログ欄の高さを抑えて縦の間延びを防ぐ */
+@media (max-width: 640px) {
+  #specPrompt { height: 220px; }
+  .log-view { height: 200px; }
+  .gauge-sub { font-size: .64rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ PIN ゲート（フロントエンド完結型の疑似認証） ============ -->
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="gate-box">
+    <svg width="46" height="46" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="var(--bg-deep)" stroke="var(--line)"></rect>
+      <path d="M9 23V9l14 14V9" fill="none" stroke="var(--accent)" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+    <h2 id="gateTitle">Nevi Web Center</h2>
+    <p id="gateDesc">ローカル疑似認証モードです。PINはこの端末のブラウザ内（LocalStorage）にのみ保存され、外部へは送信されません。</p>
+    <form id="gateForm" autocomplete="off">
+      <label class="sr-only" for="pinField">PINコード</label>
+      <input class="pin-input" id="pinField" type="password" inputmode="numeric"
+             pattern="[0-9]*" maxlength="8" placeholder="••••" aria-describedby="gateDesc">
+      <div class="keypad" id="keypad" aria-label="PIN入力キーパッド"></div>
+      <p class="gate-msg" id="gateMsg" role="status" aria-live="polite"></p>
+      <button class="btn btn-primary btn-block" type="submit" id="gateSubmit">解錠する</button>
+    </form>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-sm btn-block" type="button" id="gateSkip">PINなしで続行</button>
+      <button class="btn btn-sm btn-block" type="button" id="gateReset">PINを再設定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ヘッダ ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="var(--bg-deep)" stroke="var(--line)"></rect>
+        <path d="M9 23V9l14 14V9" fill="none" stroke="var(--accent)" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <div class="brand-text">
+        <h1>Nevi Web Center</h1>
+        <small>NEVI OPS DASHBOARD</small>
+      </div>
+    </div>
+    <div class="topbar-tools">
+      <span class="badge badge-run" id="linkBadge"><span class="dot"></span>ローカル監視中</span>
+      <span class="clock" id="clock">--:--:--</span>
+      <button class="btn btn-sm" id="themeBtn" aria-live="polite">テーマ: 自動</button>
+      <button class="btn btn-sm btn-danger" id="panicBtn">緊急停止</button>
+      <button class="btn btn-sm" id="lockBtn">ロック</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 緊急停止バナー -->
+  <div class="emergency-banner" id="emergencyBanner" role="alert">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--bad)" stroke-width="2"
+         stroke-linecap="round" aria-hidden="true">
+      <path d="M12 8v5"></path><path d="M12 17h.01"></path>
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>
+    </svg>
+    <span>緊急停止が作動しています。全タスクは中断され、MCP接続は遮断されました。</span>
+    <span class="spacer"></span>
+    <button class="btn btn-sm" id="releaseBtn">緊急停止を解除</button>
+  </div>
+
+  <main class="layout">
+
+    <!-- ================= 左カラム: ステータス ================= -->
+    <div class="col" id="colStatus">
+
+      <!-- PCリソース -->
+      <section class="card" aria-labelledby="resTitle">
+        <div class="card-head">
+          <h2 id="resTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"></path>
+            </svg>
+            PCリソースモニター
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge" id="resBadge"><span class="dot"></span>—</span>
+        </div>
+        <p class="card-note">ローカル生成のシミュレーション値を2秒ごとに更新しています（要差し替え: 実エージェントの計測APIを接続）。</p>
+
+        <div class="gauges" id="gauges"></div>
+
+        <div class="spark-wrap">
+          <h3>CPU使用率 直近60秒</h3>
+          <svg class="spark" id="spark" viewBox="0 0 300 68" preserveAspectRatio="none" role="img"
+               aria-label="CPU使用率の推移グラフ">
+            <line x1="0" y1="17" x2="300" y2="17" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4"></line>
+            <line x1="0" y1="34" x2="300" y2="34" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4"></line>
+            <line x1="0" y1="51" x2="300" y2="51" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4"></line>
+            <polyline id="sparkFill" fill="var(--accent)" fill-opacity=".14" stroke="none" points=""></polyline>
+            <polyline id="sparkLine" fill="none" stroke="var(--accent)" stroke-width="2"
+                      stroke-linejoin="round" stroke-linecap="round" points=""></polyline>
+          </svg>
+        </div>
+
+        <div class="meta-row">
+          <span>ホスト: nevi-local （要差し替え）</span>
+          <span>稼働: <span id="uptime">00:00:00</span></span>
+          <span>プロセス: <span id="procCount">—</span></span>
+        </div>
+      </section>
+
+      <!-- タスク自動化 -->
+      <section class="card" aria-labelledby="taskTitle">
+        <div class="card-head">
+          <h2 id="taskTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            /task 自動化リスト
+          </h2>
+          <span class="spacer"></span>
+          <button class="btn btn-sm" id="pauseAllBtn">全タスク一時停止</button>
+          <button class="btn btn-sm" id="runAllBtn">待機中を一括実行</button>
+        </div>
+        <div id="taskList"></div>
+
+        <h3 style="font-size:.8rem;letter-spacing:.06em;color:var(--muted);margin-top:16px">実行履歴</h3>
+        <div class="history" id="historyList"></div>
+      </section>
+
+      <!-- Googleカレンダー -->
+      <section class="card" aria-labelledby="calTitle">
+        <div class="card-head">
+          <h2 id="calTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+              <path d="M16 2v4M8 2v4M3 10h18"></path>
+            </svg>
+            Googleカレンダー連携
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge badge-ok" id="calBadge"><span class="dot"></span>疑似同期</span>
+          <button class="btn btn-sm" id="calAddToggle" aria-expanded="false" aria-controls="calForm">予定を追加</button>
+        </div>
+        <p class="card-note">OAuth未接続のため、予定はブラウザ内のみに保存される疑似データです（要差し替え: Google Calendar API連携）。</p>
+
+        <form id="calForm" hidden autocomplete="off"
+              style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--card-2)">
+          <div class="row2">
+            <div class="field">
+              <label for="calDate">日付</label>
+              <input type="date" id="calDate" required>
+            </div>
+            <div class="field">
+              <label for="calTime">開始時刻</label>
+              <input type="time" id="calTime" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="calTitleInput">タイトル</label>
+            <input type="text" id="calTitleInput" required maxlength="60" placeholder="例: バックアップ結果のレビュー">
+          </div>
+          <div class="field">
+            <label for="calWhere">場所・メモ</label>
+            <input type="text" id="calWhere" maxlength="80" placeholder="例: 自宅デスク / Discord通話">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" type="submit" id="calSubmit">この内容で登録</button>
+            <button class="btn btn-sm" type="button" id="calCancel">キャンセル</button>
+          </div>
+        </form>
+
+        <div class="cal-list" id="calList"></div>
+      </section>
+    </div>
+
+    <!-- ================= 右カラム: 操作・制御 ================= -->
+    <div class="col" id="colControl">
+
+      <!-- MCP -->
+      <section class="card" aria-labelledby="mcpTitle">
+        <div class="card-head">
+          <h2 id="mcpTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="6" cy="6" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle>
+              <circle cx="12" cy="18" r="2.5"></circle>
+              <path d="M8.5 6h7M7.4 8.1 10.6 16M16.6 8.1 13.4 16"></path>
+            </svg>
+            MCP接続ステータス
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge" id="mcpBadge"><span class="dot"></span>—</span>
+        </div>
+        <div id="mcpList"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn btn-sm" id="mcpAllOn">すべて接続</button>
+          <button class="btn btn-sm" id="mcpAllOff">すべて切断</button>
+          <button class="btn btn-sm" id="mcpPing">全サーバへPing</button>
+        </div>
+      </section>
+
+      <!-- spec 診断 -->
+      <section class="card" aria-labelledby="specTitle">
+        <div class="card-head">
+          <h2 id="specTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+            </svg>
+            /spec 応答監視と修正プロンプト生成
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge" id="specBadge"><span class="dot"></span>—</span>
+        </div>
+
+        <div class="alert" id="specAlert" role="status">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path>
+          </svg>
+          <span id="specAlertText"><strong>状態を確認中…</strong>直近の /spec 応答を集計しています。</span>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="specTimeout">応答タイムアウト判定（秒）</label>
+            <input type="number" id="specTimeout" min="5" max="600" step="5" value="45">
+          </div>
+          <div class="field">
+            <label for="specTarget">対象コマンド</label>
+            <select id="specTarget">
+              <option value="/spec">/spec</option>
+              <option value="/build">/build</option>
+              <option value="/task">/task</option>
+              <option value="/deploy">/deploy</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-sm" id="specProbe">応答テストを実行</button>
+          <button class="btn btn-primary btn-sm" id="specGen">調査・修正プロンプトを生成</button>
+          <button class="btn btn-sm" id="specCopy">プロンプトをコピー</button>
+          <button class="btn btn-sm" id="specFail">不応答を再現（デモ）</button>
+        </div>
+
+        <label class="sr-only" for="specPrompt">生成された調査・修正プロンプト</label>
+        <textarea id="specPrompt" rows="12" spellcheck="false"
+                  placeholder="「調査・修正プロンプトを生成」を押すと、直近のエラーログを埋め込んだ依頼文がここに出力されます。"></textarea>
+      </section>
+
+      <!-- REST API / Webhook -->
+      <section class="card" aria-labelledby="apiTitle">
+        <div class="card-head">
+          <h2 id="apiTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 12h4l3 7 4-14 3 7h2"></path>
+            </svg>
+            REST API / Webhook 送信シミュレータ
+          </h2>
+          <span class="spacer"></span>
+          <span class="badge badge-idle" id="apiBadge"><span class="dot"></span>未送信</span>
+        </div>
+        <p class="card-note">実際のネットワーク送信は行いません。リクエスト内容の検証とレスポンス例の確認だけをローカルで行います。</p>
+
+        <form id="apiForm" autocomplete="off">
+          <div class="row2">
+            <div class="field">
+              <label for="apiMethod">メソッド</label>
+              <select id="apiMethod">
+                <option>POST</option><option>GET</option><option>PUT</option><option>DELETE</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="apiMode">送信形式</label>
+              <select id="apiMode">
+                <option value="rest">REST API</option>
+                <option value="webhook">Webhook</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="apiUrl">エンドポイント / Webhook URL</label>
+            <div class="inline-input">
+              <input type="password" id="apiUrl" value="http://127.0.0.1:8787/nevi/command" spellcheck="false">
+              <button class="btn btn-sm" type="button" data-mask-toggle="apiUrl" aria-pressed="false">表示</button>
+            </div>
+            <span class="hint">既定でマスク表示です。「表示」で一時的に平文化します。</span>
+          </div>
+
+          <div class="field">
+            <label for="apiToken">APIトークン / 署名用シークレット</label>
+            <div class="inline-input">
+              <input type="password" id="apiToken" placeholder="未設定（要差し替え）" spellcheck="false">
+              <button class="btn btn-sm" type="button" data-mask-toggle="apiToken" aria-pressed="false">表示</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="apiBody">リクエストボディ（JSON）</label>
+            <textarea id="apiBody" rows="6" spellcheck="false">{
+  "command": "/task",
+  "action": "run",
+  "target": "vault-backup",
+  "source": "nevi-web-center"
+}</textarea>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" type="submit">送信テスト</button>
+            <button class="btn btn-sm" type="button" id="apiFormat">JSONを整形</button>
+            <button class="btn btn-sm" type="button" id="apiCurl">curl形式で出力</button>
+          </div>
+        </form>
+
+        <h3 style="font-size:.78rem;color:var(--muted);letter-spacing:.06em;margin:14px 0 6px">レスポンス</h3>
+        <pre class="code-out" id="apiOut">まだ送信していません。</pre>
+      </section>
+
+      <!-- 設定・セキュリティ -->
+      <section class="card" aria-labelledby="secTitle">
+        <div class="card-head">
+          <h2 id="secTitle">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            設定とローカルセキュリティ
+          </h2>
+        </div>
+        <p class="card-note">入力値はこのブラウザの LocalStorage にのみ保存されます。共用PCでは作業後に「保存データを全消去」を実行してください。</p>
+
+        <div class="field">
+          <label for="setPin">PINコード（4〜8桁の数字）</label>
+          <div class="inline-input">
+            <input type="password" id="setPin" inputmode="numeric" maxlength="8" placeholder="未設定">
+            <button class="btn btn-sm" type="button" data-mask-toggle="setPin" aria-pressed="false">表示</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="setPoll">リソース更新間隔（ミリ秒）</label>
+          <input type="number" id="setPoll" min="500" max="10000" step="500" value="2000">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="saveSettings">設定を保存</button>
+          <button class="btn btn-sm" id="exportSettings">設定をJSON表示</button>
+          <button class="btn btn-sm btn-danger" id="clearAll">保存データを全消去</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ================= 下部: 統合ログ ================= -->
+  <section class="card" aria-labelledby="logTitle" style="margin-top:16px">
+    <div class="card-head">
+      <h2 id="logTitle">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 4h16v16H4z"></path><path d="M8 9h8M8 13h8M8 17h5"></path>
+        </svg>
+        統合イベントログ
+      </h2>
+      <span class="spacer"></span>
+      <div class="log-toolbar">
+        <label class="sr-only" for="logFilter">ログレベルの絞り込み</label>
+        <select id="logFilter" style="min-height:32px;font-size:.78rem;width:auto">
+          <option value="all">すべて</option>
+          <option value="info">INFO</option>
+          <option value="ok">OK</option>
+          <option value="warn">WARN</option>
+          <option value="error">ERROR</option>
+        </select>
+        <button class="btn btn-sm" id="logAuto" aria-pressed="true">自動追尾: ON</button>
+        <button class="btn btn-sm" id="logCopy">コピー</button>
+        <button class="btn btn-sm" id="logClear">クリア</button>
+      </div>
+    </div>
+    <div class="log-view" id="logView" role="log" aria-live="polite" aria-label="イベントログ"></div>
+  </section>
+
+  <footer class="foot">
+    <span>Nevi Web Center — 完全ローカル動作（外部通信ゼロ / 外部CDN・Webフォント不使用）</span>
+    <span>状態管理: LocalStorage + CustomEvent</span>
+    <span id="footNote">表示データはすべてローカル生成のデモ値です（要差し替え）</span>
+  </footer>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ==========================================================
+     ユーティリティ
+     ========================================================== */
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var pad = function (n) { return String(n).padStart(2, "0"); };
+  var clamp = function (v, lo, hi) { return Math.min(hi, Math.max(lo, v)); };
+
+  function hhmmss(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  var LS_KEY = "nevi.webcenter.v1";
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function persist() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        settings: state.settings,
+        tasks: state.tasks,
+        mcp: state.mcp,
+        events: state.events,
+        history: state.history,
+        theme: state.theme,
+        unlocked: state.unlocked
+      }));
+      return true;
+    } catch (e) {
+      toast("保存に失敗しました: " + e.message, "bad");
+      return false;
+    }
+  }
+
+  /* ==========================================================
+     状態管理: 単一ストア + CustomEvent
+     ========================================================== */
+  var BUS = document.createElement("div");
+
+  function emit(name, detail) {
+    BUS.dispatchEvent(new CustomEvent("nevi:" + name, { detail: detail || {} }));
+  }
+  function on(name, fn) { BUS.addEventListener("nevi:" + name, fn); }
+
+  var today = new Date();
+  function dayOffset(n) {
+    var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + n);
+    return ymd(d);
+  }
+
+  var state = {
+    booted: Date.now(),
+    unlocked: false,
+    emergency: false,
+    theme: "auto",
+    settings: { pin: "", poll: 2000, apiUrl: "http://127.0.0.1:8787/nevi/command", apiToken: "", specTimeout: 45 },
+    res: { cpu: 22, mem: 46, disk: 63, procs: 184 },
+    cpuHist: [],
+    tasks: [
+      { id: "vault-backup",  name: "Obsidian Vault 自動バックアップ", cmd: "/task run vault-backup",
+        schedule: "毎日 07:00", status: "idle", progress: 0, last: "本日 07:00 / 成功", retries: 0 },
+      { id: "spec-watch",    name: "/spec 応答ヘルスチェック", cmd: "/task run spec-watch",
+        schedule: "5分ごと", status: "running", progress: 38, last: "実行中", retries: 0 },
+      { id: "cal-sync",      name: "Googleカレンダー予定の取り込み", cmd: "/task run cal-sync",
+        schedule: "30分ごと", status: "idle", progress: 0, last: "42分前 / 成功", retries: 0 },
+      { id: "mcp-healthz",   name: "MCPサーバ疎通チェック", cmd: "/task run mcp-healthz",
+        schedule: "10分ごと", status: "error", progress: 0, last: "9分前 / タイムアウト", retries: 2 },
+      { id: "log-rotate",    name: "エージェントログのローテーション", cmd: "/task run log-rotate",
+        schedule: "毎日 03:30", status: "paused", progress: 0, last: "昨日 03:30 / 成功", retries: 0 }
+    ],
+    history: [
+      { name: "Obsidian Vault 自動バックアップ", at: "07:00:12", result: "成功", note: "差分 42ファイル / 3.1秒", lv: "ok" },
+      { name: "Googleカレンダー予定の取り込み", at: "06:30:04", result: "成功", note: "予定 5件を同期", lv: "ok" },
+      { name: "MCPサーバ疎通チェック", at: "06:21:47", result: "失敗", note: "obsidian: 応答なし（45秒）", lv: "bad" },
+      { name: "エージェントログのローテーション", at: "03:30:00", result: "成功", note: "18MB を圧縮", lv: "ok" },
+      { name: "/spec 応答ヘルスチェック", at: "03:05:31", result: "警告", note: "応答 38.4秒（閾値の85%）", lv: "warn" }
+    ],
+    mcp: [
+      { id: "obsidian", name: "obsidian (Local REST API)", endpoint: "http://127.0.0.1:27123", timeout: 15, retry: 3, on: false, latency: null },
+      { id: "filesystem", name: "filesystem", endpoint: "stdio://mcp-server-filesystem", timeout: 10, retry: 2, on: true, latency: 12 },
+      { id: "google-drive", name: "google-drive", endpoint: "https://mcp.local/gdrive", timeout: 20, retry: 3, on: true, latency: 88 },
+      { id: "notebooklm", name: "notebooklm-cli", endpoint: "stdio://nlm-bridge", timeout: 30, retry: 1, on: false, latency: null }
+    ],
+    calendar: [
+      { id: "c1", date: dayOffset(0), time: "09:30", title: "Nevi Web Center 仕様レビュー", where: "自宅デスク / Discord" },
+      { id: "c2", date: dayOffset(0), time: "14:00", title: "MCP接続タイムアウトの原因切り分け", where: "作業ログを Vault に記録" },
+      { id: "c3", date: dayOffset(1), time: "10:00", title: "バックアップ結果の週次確認", where: "Obsidian Vault" },
+      { id: "c4", date: dayOffset(2), time: "20:00", title: "/spec コマンド改修の振り返り", where: "ADR を 30_設計判断 に追記" }
+    ],
+    events: [],
+    spec: { ok: true, lastMs: 1240, fails: 0, lastCheck: null },
+    api: { lastStatus: null }
+  };
+
+  /* 保存済み状態の復元 */
+  (function restore() {
+    var saved = loadState();
+    if (!saved) return;
+    if (saved.settings) {
+      for (var k in saved.settings) {
+        if (Object.prototype.hasOwnProperty.call(state.settings, k)) state.settings[k] = saved.settings[k];
+      }
+    }
+    if (Array.isArray(saved.tasks) && saved.tasks.length) state.tasks = saved.tasks;
+    if (Array.isArray(saved.mcp) && saved.mcp.length) state.mcp = saved.mcp;
+    if (Array.isArray(saved.history) && saved.history.length) state.history = saved.history;
+    if (Array.isArray(saved.events)) state.events = saved.events.slice(-200);
+    if (saved.theme) state.theme = saved.theme;
+    state.unlocked = !!saved.unlocked;
+  })();
+
+  /* ==========================================================
+     ログ
+     ========================================================== */
+  var LV_LABEL = { info: "INFO", ok: "OK", warn: "WARN", error: "ERROR" };
+
+  function log(level, msg) {
+    var e = { t: hhmmss(new Date()), lv: level, msg: String(msg) };
+    state.events.push(e);
+    if (state.events.length > 300) state.events = state.events.slice(-300);
+    emit("log", e);
+  }
+
+  var logView = $("#logView");
+  var logAutoScroll = true;
+
+  function renderLog() {
+    var filter = $("#logFilter").value;
+    var rows = state.events.filter(function (e) { return filter === "all" || e.lv === filter; });
+    if (!rows.length) {
+      logView.innerHTML = '<div class="log-line"><span class="log-time">--:--:--</span>' +
+        '<span class="log-lv lv-info">INFO</span><span>該当するログはありません。</span></div>';
+      return;
+    }
+    logView.innerHTML = rows.map(function (e) {
+      return '<div class="log-line"><span class="log-time">' + e.t + '</span>' +
+        '<span class="log-lv lv-' + e.lv + '">' + LV_LABEL[e.lv] + '</span>' +
+        '<span>' + esc(e.msg) + '</span></div>';
+    }).join("");
+    if (logAutoScroll) logView.scrollTop = logView.scrollHeight;
+  }
+  on("log", renderLog);
+
+  /* ==========================================================
+     トースト
+     ========================================================== */
+  function toast(msg, kind) {
+    var box = $("#toasts");
+    var el = document.createElement("div");
+    el.className = "toast" + (kind ? " " + kind : "");
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(function () {
+      el.style.transition = "opacity .3s";
+      el.style.opacity = "0";
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+    }, 2600);
+  }
+
+  /* ==========================================================
+     テーマ
+     ========================================================== */
+  var THEME_LABEL = { auto: "テーマ: 自動", dark: "テーマ: ダーク", light: "テーマ: ライト" };
+
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", state.theme);
+    $("#themeBtn").textContent = THEME_LABEL[state.theme];
+  }
+  $("#themeBtn").addEventListener("click", function () {
+    state.theme = state.theme === "auto" ? "dark" : (state.theme === "dark" ? "light" : "auto");
+    applyTheme();
+    persist();
+    log("info", "テーマを切り替えました: " + state.theme);
+  });
+
+  /* ==========================================================
+     PINゲート（フロントエンド完結型の疑似認証）
+     ========================================================== */
+  var gate = $("#gate");
+  var pinField = $("#pinField");
+  var gateMsg = $("#gateMsg");
+  var settingMode = false;
+
+  (function buildKeypad() {
+    var keys = ["1","2","3","4","5","6","7","8","9","C","0","←"];
+    var frag = document.createDocumentFragment();
+    keys.forEach(function (k) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn btn-sm";
+      b.textContent = k;
+      b.addEventListener("click", function () {
+        if (k === "C") pinField.value = "";
+        else if (k === "←") pinField.value = pinField.value.slice(0, -1);
+        else if (pinField.value.length < 8) pinField.value += k;
+        pinField.focus();
+      });
+      frag.appendChild(b);
+    });
+    $("#keypad").appendChild(frag);
+  })();
+
+  function showGate() {
+    settingMode = !state.settings.pin;
+    gate.hidden = false;
+    document.body.style.overflow = "hidden";
+    pinField.value = "";
+    gateMsg.className = "gate-msg";
+    gateMsg.textContent = settingMode ? "初回アクセスです。4〜8桁のPINを設定してください。" : "";
+    $("#gateSubmit").textContent = settingMode ? "このPINで設定する" : "解錠する";
+    $("#gateReset").hidden = settingMode;
+    setTimeout(function () { pinField.focus(); }, 30);
+  }
+  function hideGate() {
+    gate.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  $("#gateForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var v = pinField.value.trim();
+    if (settingMode) {
+      if (!/^\d{4,8}$/.test(v)) {
+        gateMsg.className = "gate-msg err";
+        gateMsg.textContent = "4〜8桁の数字で入力してください。";
+        return;
+      }
+      state.settings.pin = v;
+      state.unlocked = true;
+      persist();
+      hideGate();
+      log("ok", "PINを設定し、ローカル疑似認証を有効化しました。");
+      toast("PINを設定しました", "ok");
+      syncSettingsInputs();
+      return;
+    }
+    if (v === state.settings.pin) {
+      state.unlocked = true;
+      persist();
+      hideGate();
+      log("ok", "PIN認証に成功しました。");
+      toast("解錠しました", "ok");
+    } else {
+      gateMsg.className = "gate-msg err";
+      gateMsg.textContent = "PINが一致しません。";
+      pinField.value = "";
+      log("warn", "PIN認証に失敗しました。");
+    }
+  });
+
+  $("#gateSkip").addEventListener("click", function () {
+    state.unlocked = true;
+    persist();
+    hideGate();
+    log("warn", "PINなしのローカル疑似認証で続行しました。");
+  });
+  $("#gateReset").addEventListener("click", function () {
+    state.settings.pin = "";
+    persist();
+    showGate();
+    log("warn", "PINを消去しました。再設定してください。");
+  });
+  $("#lockBtn").addEventListener("click", function () {
+    state.unlocked = false;
+    persist();
+    showGate();
+    log("info", "画面をロックしました。");
+  });
+
+  /* ==========================================================
+     リソースゲージ
+     ========================================================== */
+  var GAUGES = [
+    { key: "cpu",  label: "CPU",     unit: "%",  sub: "8コア / 16スレッド" },
+    { key: "mem",  label: "MEMORY",  unit: "%",  sub: "32.0 GB 搭載" },
+    { key: "disk", label: "DISK C:", unit: "%",  sub: "1.0 TB NVMe" }
+  ];
+  var R = 42, CIRC = 2 * Math.PI * R;
+
+  (function buildGauges() {
+    $("#gauges").innerHTML = GAUGES.map(function (g) {
+      return '' +
+      '<div class="gauge">' +
+        '<svg viewBox="0 0 110 110" role="img" aria-labelledby="glabel-' + g.key + '">' +
+          '<title id="glabel-' + g.key + '">' + g.label + '使用率</title>' +
+          '<circle cx="55" cy="55" r="' + R + '" fill="none" stroke="var(--line)" stroke-width="9"></circle>' +
+          '<circle class="gauge-arc" id="arc-' + g.key + '" cx="55" cy="55" r="' + R + '" fill="none" ' +
+            'stroke="var(--accent)" stroke-width="9" stroke-linecap="round" ' +
+            'stroke-dasharray="' + CIRC.toFixed(1) + '" stroke-dashoffset="' + CIRC.toFixed(1) + '" ' +
+            'transform="rotate(-90 55 55)"></circle>' +
+          '<text class="gauge-value" id="val-' + g.key + '" x="55" y="58" text-anchor="middle">--</text>' +
+          '<text class="gauge-unit" x="55" y="72" text-anchor="middle">' + g.unit + '</text>' +
+        '</svg>' +
+        '<div class="gauge-label">' + g.label + '</div>' +
+        '<div class="gauge-sub">' + g.sub + '</div>' +
+      '</div>';
+    }).join("");
+  })();
+
+  function gaugeColor(v) {
+    return v >= 85 ? "var(--bad)" : (v >= 65 ? "var(--warn)" : "var(--accent)");
+  }
+
+  function renderResources() {
+    GAUGES.forEach(function (g) {
+      var v = Math.round(state.res[g.key]);
+      var arc = document.getElementById("arc-" + g.key);
+      var txt = document.getElementById("val-" + g.key);
+      arc.setAttribute("stroke-dashoffset", (CIRC * (1 - v / 100)).toFixed(1));
+      arc.setAttribute("stroke", gaugeColor(v));
+      txt.textContent = v;
+    });
+    $("#procCount").textContent = state.res.procs;
+
+    var worst = Math.max(state.res.cpu, state.res.mem, state.res.disk);
+    var b = $("#resBadge");
+    b.className = "badge " + (worst >= 85 ? "badge-bad" : worst >= 65 ? "badge-warn" : "badge-ok");
+    b.innerHTML = '<span class="dot"></span>' + (worst >= 85 ? "高負荷" : worst >= 65 ? "やや高負荷" : "正常");
+
+    // スパークライン
+    var h = state.cpuHist;
+    if (h.length > 1) {
+      var step = 300 / (h.length - 1);
+      var pts = h.map(function (v, i) {
+        return (i * step).toFixed(1) + "," + (68 - (v / 100) * 62).toFixed(1);
+      });
+      $("#sparkLine").setAttribute("points", pts.join(" "));
+      $("#sparkFill").setAttribute("points", "0,68 " + pts.join(" ") + " 300,68");
+    }
+  }
+
+  function tickResources() {
+    function drift(v, lo, hi, amp) {
+      return clamp(v + (Math.random() - 0.5) * amp, lo, hi);
+    }
+    var load = state.tasks.filter(function (t) { return t.status === "running"; }).length;
+    state.res.cpu = drift(state.res.cpu + load * 1.2, 4, 97, 16);
+    state.res.mem = drift(state.res.mem, 30, 92, 4);
+    state.res.disk = drift(state.res.disk, 55, 88, 0.6);
+    state.res.procs = Math.round(drift(state.res.procs, 150, 240, 6));
+
+    state.cpuHist.push(state.res.cpu);
+    if (state.cpuHist.length > 30) state.cpuHist.shift();
+
+    if (state.res.cpu >= 92 && Math.random() < 0.4) log("warn", "CPU使用率が高い状態です（" + Math.round(state.res.cpu) + "%）。");
+    emit("res", {});
+  }
+  on("res", renderResources);
+
+  /* ==========================================================
+     タスク
+     ========================================================== */
+  var TASK_BADGE = {
+    running: ["badge-run", "実行中"],
+    idle:    ["badge-idle", "待機"],
+    done:    ["badge-ok", "完了"],
+    error:   ["badge-bad", "エラー"],
+    paused:  ["badge-warn", "一時停止"]
+  };
+
+  function renderTasks() {
+    $("#taskList").innerHTML = state.tasks.map(function (t) {
+      var b = TASK_BADGE[t.status] || TASK_BADGE.idle;
+      var dis = state.emergency ? " disabled" : "";
+      return '' +
+      '<article class="task' + (t.status === "error" ? " is-error" : "") + '" data-task="' + t.id + '">' +
+        '<div class="task-top">' +
+          '<span class="task-name">' + esc(t.name) + '</span>' +
+          '<span class="badge ' + b[0] + '"><span class="dot"></span>' + b[1] + '</span>' +
+          '<span class="task-cmd" style="margin-left:auto">' + esc(t.schedule) + '</span>' +
+        '</div>' +
+        '<div class="task-cmd">' + esc(t.cmd) + ' — 前回: ' + esc(t.last) +
+          (t.retries ? ' / 再試行 ' + t.retries + '回' : '') + '</div>' +
+        '<div class="progress"><span style="width:' + clamp(t.progress, 0, 100) + '%"></span></div>' +
+        '<div class="task-actions">' +
+          '<button class="btn btn-sm" data-act="run" data-id="' + t.id + '"' +
+            (t.status === "running" ? " disabled" : dis) + '>実行</button>' +
+          '<button class="btn btn-sm" data-act="stop" data-id="' + t.id + '"' +
+            (t.status === "running" ? "" : " disabled") + '>停止</button>' +
+          '<button class="btn btn-sm" data-act="retry" data-id="' + t.id + '"' + dis + '>再試行</button>' +
+          '<button class="btn btn-sm" data-act="toggle" data-id="' + t.id + '"' + dis + '>' +
+            (t.status === "paused" ? "再開" : "一時停止") + '</button>' +
+        '</div>' +
+      '</article>';
+    }).join("");
+  }
+
+  function renderHistory() {
+    $("#historyList").innerHTML = state.history.slice(0, 12).map(function (h) {
+      return '<div class="hist-card ' + (h.lv === "ok" ? "" : h.lv === "bad" ? "bad" : "warn") + '">' +
+        '<strong>' + esc(h.name) + '</strong>' +
+        '<time>' + esc(h.at) + '</time> — ' + esc(h.result) +
+        '<div style="color:var(--muted)">' + esc(h.note) + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  on("tasks", function () { renderTasks(); renderHistory(); persist(); });
+
+  function findTask(id) {
+    for (var i = 0; i < state.tasks.length; i++) if (state.tasks[i].id === id) return state.tasks[i];
+    return null;
+  }
+
+  var runTimers = {};
+
+  function startTask(t, label) {
+    if (state.emergency) { toast("緊急停止中は実行できません", "bad"); return; }
+    if (t.status === "running") return;
+    t.status = "running";
+    t.progress = 0;
+    t.last = "実行中";
+    log("info", (label || "実行") + ": " + t.name + " (" + t.cmd + ")");
+    emit("tasks", {});
+
+    clearInterval(runTimers[t.id]);
+    runTimers[t.id] = setInterval(function () {
+      if (t.status !== "running") { clearInterval(runTimers[t.id]); return; }
+      t.progress += 8 + Math.random() * 14;
+      if (t.progress >= 100) {
+        clearInterval(runTimers[t.id]);
+        t.progress = 100;
+        // MCP疎通チェックはMCPがすべてOFFのとき失敗する（因果のあるデモ挙動）
+        var anyOn = state.mcp.some(function (m) { return m.on; });
+        var failed = (t.id === "mcp-healthz" && !anyOn);
+        t.status = failed ? "error" : "done";
+        t.last = hhmmss(new Date()) + (failed ? " / 失敗" : " / 成功");
+        pushHistory(t.name, failed ? "失敗" : "成功",
+          failed ? "接続中のMCPサーバがありません" : "所要 " + (1 + Math.random() * 4).toFixed(1) + "秒",
+          failed ? "bad" : "ok");
+        log(failed ? "error" : "ok", t.name + " が" + (failed ? "失敗しました。" : "完了しました。"));
+      }
+      emit("tasks", {});
+    }, 420);
+  }
+
+  function pushHistory(name, result, note, lv) {
+    state.history.unshift({ name: name, at: hhmmss(new Date()), result: result, note: note, lv: lv });
+    if (state.history.length > 24) state.history.pop();
+  }
+
+  $("#taskList").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-act]");
+    if (!btn) return;
+    var t = findTask(btn.getAttribute("data-id"));
+    if (!t) return;
+    var act = btn.getAttribute("data-act");
+
+    if (act === "run") { startTask(t, "手動実行"); }
+    else if (act === "stop") {
+      clearInterval(runTimers[t.id]);
+      t.status = "idle"; t.progress = 0; t.last = hhmmss(new Date()) + " / 手動停止";
+      pushHistory(t.name, "中断", "WebUIから停止", "warn");
+      log("warn", t.name + " を停止しました。");
+      emit("tasks", {});
+    }
+    else if (act === "retry") {
+      t.retries += 1;
+      startTask(t, "再試行(" + t.retries + "回目)");
+    }
+    else if (act === "toggle") {
+      if (t.status === "paused") { t.status = "idle"; log("info", t.name + " を再開待機にしました。"); }
+      else {
+        clearInterval(runTimers[t.id]);
+        t.status = "paused"; t.progress = 0;
+        log("warn", t.name + " を一時停止しました。");
+      }
+      emit("tasks", {});
+    }
+  });
+
+  $("#runAllBtn").addEventListener("click", function () {
+    var n = 0;
+    state.tasks.forEach(function (t) {
+      if (t.status === "idle" || t.status === "done" || t.status === "error") { startTask(t, "一括実行"); n++; }
+    });
+    toast(n ? n + "件のタスクを開始しました" : "実行可能な待機タスクはありません", n ? "ok" : "");
+  });
+
+  $("#pauseAllBtn").addEventListener("click", function () {
+    state.tasks.forEach(function (t) {
+      clearInterval(runTimers[t.id]);
+      t.status = "paused"; t.progress = 0;
+    });
+    log("warn", "全タスクを一時停止しました。");
+    toast("全タスクを一時停止しました");
+    emit("tasks", {});
+  });
+
+  /* ==========================================================
+     緊急停止
+     ========================================================== */
+  function setEmergency(v) {
+    state.emergency = v;
+    document.body.classList.toggle("is-emergency", v);
+    if (v) {
+      state.tasks.forEach(function (t) {
+        clearInterval(runTimers[t.id]);
+        if (t.status === "running") t.last = hhmmss(new Date()) + " / 緊急停止";
+        t.status = "paused"; t.progress = 0;
+      });
+      state.mcp.forEach(function (m) { m.on = false; m.latency = null; });
+      log("error", "緊急停止を実行しました。全タスク停止 / 全MCP切断。");
+      toast("緊急停止を実行しました", "bad");
+    } else {
+      state.tasks.forEach(function (t) { if (t.status === "paused") t.status = "idle"; });
+      log("ok", "緊急停止を解除しました。タスクは待機状態に戻りました。");
+      toast("緊急停止を解除しました", "ok");
+    }
+    emit("tasks", {});
+    emit("mcp", {});
+    $("#panicBtn").disabled = v;
+  }
+  $("#panicBtn").addEventListener("click", function () { setEmergency(true); });
+  $("#releaseBtn").addEventListener("click", function () { setEmergency(false); });
+
+  /* ==========================================================
+     MCP
+     ========================================================== */
+  function renderMcp() {
+    $("#mcpList").innerHTML = state.mcp.map(function (m) {
+      var cls = m.on ? "badge-ok" : "badge-idle";
+      var label = m.on ? "接続中" : "切断";
+      return '' +
+      '<div class="mcp-item" data-mcp="' + m.id + '">' +
+        '<div class="mcp-top">' +
+          '<span class="badge ' + cls + '"><span class="dot"></span>' + label + '</span>' +
+          '<span class="mcp-name">' + esc(m.name) + '</span>' +
+          '<label class="switch">' +
+            '<span class="sr-only">' + esc(m.name) + ' の接続</span>' +
+            '<input type="checkbox" data-mcp-toggle="' + m.id + '"' + (m.on ? " checked" : "") + '>' +
+            '<span class="track" aria-hidden="true"></span>' +
+            '<span class="label">' + (m.on ? "ON" : "OFF") + '</span>' +
+          '</label>' +
+        '</div>' +
+        '<div class="mcp-endpoint">' + esc(m.endpoint) +
+          (m.on && m.latency != null ? " — " + m.latency + "ms" : "") + '</div>' +
+        '<div style="margin-top:8px">' +
+          '<button class="btn btn-sm" data-mcp-edit="' + m.id + '" aria-expanded="false">接続パラメータ</button>' +
+        '</div>' +
+        '<div class="mcp-params">' +
+          '<div class="row2">' +
+            '<div class="field">' +
+              '<label for="ep-' + m.id + '">エンドポイント</label>' +
+              '<input type="text" id="ep-' + m.id + '" value="' + esc(m.endpoint) + '" spellcheck="false">' +
+            '</div>' +
+            '<div class="field">' +
+              '<label for="to-' + m.id + '">タイムアウト（秒）</label>' +
+              '<input type="number" id="to-' + m.id + '" min="1" max="120" value="' + m.timeout + '">' +
+            '</div>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="rt-' + m.id + '">再接続リトライ回数</label>' +
+            '<input type="number" id="rt-' + m.id + '" min="0" max="10" value="' + m.retry + '">' +
+          '</div>' +
+          '<button class="btn btn-primary btn-sm" data-mcp-save="' + m.id + '">パラメータを保存</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    var onCount = state.mcp.filter(function (m) { return m.on; }).length;
+    var b = $("#mcpBadge");
+    b.className = "badge " + (onCount === state.mcp.length ? "badge-ok" : onCount === 0 ? "badge-bad" : "badge-warn");
+    b.innerHTML = '<span class="dot"></span>' + onCount + " / " + state.mcp.length + " 接続";
+
+    var lb = $("#linkBadge");
+    lb.className = "badge " + (state.emergency ? "badge-bad" : onCount ? "badge-run" : "badge-warn");
+    lb.innerHTML = '<span class="dot"></span>' +
+      (state.emergency ? "緊急停止中" : onCount ? "ローカル監視中" : "MCP全切断");
+  }
+  on("mcp", function () { renderMcp(); persist(); });
+
+  function findMcp(id) {
+    for (var i = 0; i < state.mcp.length; i++) if (state.mcp[i].id === id) return state.mcp[i];
+    return null;
+  }
+
+  $("#mcpList").addEventListener("change", function (ev) {
+    var id = ev.target.getAttribute && ev.target.getAttribute("data-mcp-toggle");
+    if (!id) return;
+    var m = findMcp(id);
+    if (state.emergency) {
+      ev.target.checked = false;
+      toast("緊急停止中はMCPを接続できません", "bad");
+      return;
+    }
+    m.on = ev.target.checked;
+    m.latency = m.on ? Math.round(8 + Math.random() * 120) : null;
+    log(m.on ? "ok" : "warn", "MCP " + m.name + " を" + (m.on ? "接続しました（" + m.latency + "ms）。" : "切断しました。"));
+    emit("mcp", {});
+  });
+
+  $("#mcpList").addEventListener("click", function (ev) {
+    var editBtn = ev.target.closest("button[data-mcp-edit]");
+    if (editBtn) {
+      var item = editBtn.closest(".mcp-item");
+      var open = item.classList.toggle("open");
+      editBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      return;
+    }
+    var saveBtn = ev.target.closest("button[data-mcp-save]");
+    if (saveBtn) {
+      var id = saveBtn.getAttribute("data-mcp-save");
+      var m = findMcp(id);
+      var ep = $("#ep-" + id).value.trim();
+      var to = parseInt($("#to-" + id).value, 10);
+      var rt = parseInt($("#rt-" + id).value, 10);
+      if (!ep) { toast("エンドポイントを入力してください", "bad"); return; }
+      m.endpoint = ep;
+      m.timeout = clamp(isNaN(to) ? 15 : to, 1, 120);
+      m.retry = clamp(isNaN(rt) ? 3 : rt, 0, 10);
+      log("info", "MCP " + m.name + " の接続パラメータを更新しました（timeout " + m.timeout + "s / retry " + m.retry + "）。");
+      toast("接続パラメータを保存しました", "ok");
+      emit("mcp", {});
+    }
+  });
+
+  $("#mcpAllOn").addEventListener("click", function () {
+    if (state.emergency) { toast("緊急停止中は接続できません", "bad"); return; }
+    state.mcp.forEach(function (m) { m.on = true; m.latency = Math.round(8 + Math.random() * 120); });
+    log("ok", "すべてのMCPサーバへ接続しました。");
+    emit("mcp", {});
+  });
+  $("#mcpAllOff").addEventListener("click", function () {
+    state.mcp.forEach(function (m) { m.on = false; m.latency = null; });
+    log("warn", "すべてのMCPサーバを切断しました。");
+    emit("mcp", {});
+  });
+  $("#mcpPing").addEventListener("click", function () {
+    var lines = state.mcp.map(function (m) {
+      if (!m.on) return m.name + ": 切断中のためスキップ";
+      m.latency = Math.round(8 + Math.random() * 140);
+      return m.name + ": " + m.latency + "ms";
+    });
+    log("info", "Ping結果 — " + lines.join(" / "));
+    toast("Pingを実行しました");
+    emit("mcp", {});
+  });
+
+  /* ==========================================================
+     カレンダー
+     ========================================================== */
+  var WD = ["日", "月", "火", "水", "木", "金", "土"];
+
+  function labelDate(dstr) {
+    var p = dstr.split("-");
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    var t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var diff = Math.round((d - t0) / 86400000);
+    if (diff === 0) return "今日";
+    if (diff === 1) return "明日";
+    return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")";
+  }
+
+  function renderCal() {
+    var sorted = state.calendar.slice().sort(function (a, b) {
+      return (a.date + a.time).localeCompare(b.date + b.time);
+    });
+    if (!sorted.length) {
+      $("#calList").innerHTML = '<p class="card-note" style="margin:0">登録された予定はありません。</p>';
+      return;
+    }
+    $("#calList").innerHTML = sorted.map(function (c) {
+      return '' +
+      '<div class="cal-item" data-cal="' + c.id + '">' +
+        '<div class="cal-time">' + labelDate(c.date) + '<br>' + esc(c.time) + '</div>' +
+        '<div style="min-width:0">' +
+          '<div class="cal-title">' + esc(c.title) + '</div>' +
+          '<div class="cal-where">' + (c.where ? esc(c.where) : "場所未設定") + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px">' +
+          '<button class="btn btn-sm" data-cal-edit="' + c.id + '">編集</button>' +
+          '<button class="btn btn-sm" data-cal-del="' + c.id + '">削除</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+  on("cal", renderCal);
+
+  var calForm = $("#calForm");
+  var editingCal = null;
+
+  function openCalForm(c) {
+    editingCal = c || null;
+    calForm.hidden = false;
+    $("#calAddToggle").setAttribute("aria-expanded", "true");
+    $("#calDate").value = c ? c.date : ymd(new Date());
+    $("#calTime").value = c ? c.time : "10:00";
+    $("#calTitleInput").value = c ? c.title : "";
+    $("#calWhere").value = c ? c.where : "";
+    $("#calSubmit").textContent = c ? "変更を保存" : "この内容で登録";
+    $("#calTitleInput").focus();
+  }
+  function closeCalForm() {
+    calForm.hidden = true;
+    editingCal = null;
+    $("#calAddToggle").setAttribute("aria-expanded", "false");
+  }
+
+  $("#calAddToggle").addEventListener("click", function () {
+    if (calForm.hidden) openCalForm(null); else closeCalForm();
+  });
+  $("#calCancel").addEventListener("click", closeCalForm);
+
+  calForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var title = $("#calTitleInput").value.trim();
+    if (!title) { toast("タイトルを入力してください", "bad"); return; }
+    var payload = {
+      date: $("#calDate").value || ymd(new Date()),
+      time: $("#calTime").value || "10:00",
+      title: title,
+      where: $("#calWhere").value.trim()
+    };
+    if (editingCal) {
+      editingCal.date = payload.date; editingCal.time = payload.time;
+      editingCal.title = payload.title; editingCal.where = payload.where;
+      log("ok", "カレンダー予定を更新しました: " + payload.title);
+      toast("予定を更新しました", "ok");
+    } else {
+      payload.id = "c" + Date.now();
+      state.calendar.push(payload);
+      log("ok", "カレンダー予定を追加しました: " + payload.date + " " + payload.time + " " + payload.title);
+      toast("予定を追加しました", "ok");
+    }
+    closeCalForm();
+    emit("cal", {});
+  });
+
+  $("#calList").addEventListener("click", function (ev) {
+    var e = ev.target.closest("button[data-cal-edit]");
+    if (e) {
+      var id = e.getAttribute("data-cal-edit");
+      for (var i = 0; i < state.calendar.length; i++) {
+        if (state.calendar[i].id === id) { openCalForm(state.calendar[i]); break; }
+      }
+      return;
+    }
+    var d = ev.target.closest("button[data-cal-del]");
+    if (d) {
+      var did = d.getAttribute("data-cal-del");
+      var removed = null;
+      state.calendar = state.calendar.filter(function (c) {
+        if (c.id === did) { removed = c; return false; }
+        return true;
+      });
+      if (removed) {
+        log("warn", "カレンダー予定を削除しました: " + removed.title);
+        toast("予定を削除しました");
+      }
+      emit("cal", {});
+    }
+  });
+
+  /* ==========================================================
+     /spec 応答監視 + プロンプト生成
+     ========================================================== */
+  function renderSpec() {
+    var badge = $("#specBadge");
+    var alertBox = $("#specAlert");
+    var txt = $("#specAlertText");
+    var last = state.spec.lastCheck ? state.spec.lastCheck : "未実施";
+
+    if (state.spec.ok) {
+      badge.className = "badge badge-ok";
+      badge.innerHTML = '<span class="dot"></span>応答正常';
+      alertBox.className = "alert ok";
+      txt.innerHTML = "<strong>/spec は正常に応答しています</strong>直近の応答時間 " +
+        state.spec.lastMs + "ms ／ 最終確認 " + esc(last);
+    } else {
+      badge.className = "badge badge-bad";
+      badge.innerHTML = '<span class="dot"></span>不応答';
+      alertBox.className = "alert";
+      txt.innerHTML = "<strong>/spec の応答が停止しています</strong>連続 " + state.spec.fails +
+        " 回タイムアウト（閾値 " + state.settings.specTimeout + "秒）／ 最終確認 " + esc(last);
+    }
+  }
+  on("spec", function () { renderSpec(); });
+
+  $("#specProbe").addEventListener("click", function () {
+    var cmd = $("#specTarget").value;
+    var limit = parseInt($("#specTimeout").value, 10) || 45;
+    var ms = Math.round(400 + Math.random() * (limit * 1000 * 0.7));
+    state.spec.lastCheck = hhmmss(new Date());
+    if (ms > limit * 1000 * 0.6) {
+      state.spec.ok = false;
+      state.spec.fails += 1;
+      state.spec.lastMs = ms;
+      log("error", cmd + " の応答が遅延しています（" + ms + "ms / 閾値 " + limit + "秒の60%超）。");
+    } else {
+      state.spec.ok = true;
+      state.spec.fails = 0;
+      state.spec.lastMs = ms;
+      log("ok", cmd + " は " + ms + "ms で応答しました。");
+    }
+    emit("spec", {});
+  });
+
+  $("#specFail").addEventListener("click", function () {
+    var cmd = $("#specTarget").value;
+    state.spec.ok = false;
+    state.spec.fails += 1;
+    state.spec.lastMs = (parseInt($("#specTimeout").value, 10) || 45) * 1000;
+    state.spec.lastCheck = hhmmss(new Date());
+    log("error", cmd + " がタイムアウトしました（応答なし）。AgentEngine からの応答イベントが届いていません。");
+    log("error", "TimeoutError: no response from agent within " + $("#specTimeout").value + "s (command=" + cmd + ")");
+    pushHistory(cmd + " 応答監視", "失敗", "タイムアウト（応答なし）", "bad");
+    emit("spec", {});
+    emit("tasks", {});
+  });
+
+  function buildSpecPrompt() {
+    var cmd = $("#specTarget").value;
+    var limit = $("#specTimeout").value;
+    var recent = state.events.filter(function (e) { return e.lv === "error" || e.lv === "warn"; }).slice(-8);
+    var logText = recent.length
+      ? recent.map(function (e) { return "  [" + e.t + "] " + LV_LABEL[e.lv] + " " + e.msg; }).join("\n")
+      : "  （警告・エラーログはまだ記録されていません）";
+    var mcpText = state.mcp.map(function (m) {
+      return "  - " + m.name + ": " + (m.on ? "接続中 (" + (m.latency != null ? m.latency + "ms" : "計測なし") + ")" : "切断") +
+        " / endpoint=" + m.endpoint + " / timeout=" + m.timeout + "s / retry=" + m.retry;
+    }).join("\n");
+
+    return [
+      "# " + cmd + " コマンド不応答の調査と修正",
+      "",
+      "## 症状",
+      "- Discord から `" + cmd + "` を実行しても応答が返ってこない。",
+      "- 連続タイムアウト回数: " + state.spec.fails + " 回（判定閾値 " + limit + " 秒）",
+      "- 直近の応答時間: " + state.spec.lastMs + " ms",
+      "- 検知時刻: " + (state.spec.lastCheck || hhmmss(new Date())),
+      "",
+      "## 収集済みログ（Nevi Web Center の統合ログより）",
+      "```",
+      logText,
+      "```",
+      "",
+      "## 実行環境スナップショット",
+      "- CPU " + Math.round(state.res.cpu) + "% / MEM " + Math.round(state.res.mem) + "% / DISK " + Math.round(state.res.disk) + "%",
+      "- 実行中タスク: " + (state.tasks.filter(function (t) { return t.status === "running"; })
+          .map(function (t) { return t.id; }).join(", ") || "なし"),
+      "- 緊急停止フラグ: " + (state.emergency ? "ON" : "OFF"),
+      "",
+      "## MCP接続状態",
+      mcpText,
+      "",
+      "## 調査してほしいこと",
+      "1. `" + cmd + "` のハンドラが登録され、Discord のインタラクションを受信できているか（受信ログの有無）。",
+      "2. 応答生成が同期処理でブロックしていないか。3秒以内の defer / 遅延応答が実装されているか。",
+      "3. AgentEngine 側の例外が握り潰されていないか（try/except で無言終了していないか）。",
+      "4. MCP クライアントの待機が全体をブロックしていないか。タイムアウト値とリトライ設定は妥当か。",
+      "5. レート制限・トークン枯渇による無応答ではないか。",
+      "",
+      "## 期待する修正",
+      "- 原因箇所をファイル名と行番号で特定し、最小の差分で修正する。",
+      "- タイムアウト時はユーザーへエラー内容を返す（無言で終わらせない）。",
+      "- 再発検知用に構造化ログを残す。",
+      "- 修正後、`" + cmd + "` を実際に実行して応答が返ることを確認してから完了とする。"
+    ].join("\n");
+  }
+
+  $("#specGen").addEventListener("click", function () {
+    $("#specPrompt").value = buildSpecPrompt();
+    log("info", "調査・修正プロンプトを生成しました（" + $("#specTarget").value + "）。");
+    toast("プロンプトを生成しました", "ok");
+  });
+
+  function copyText(text, okMsg) {
+    if (!text) { toast("コピーする内容がありません", "bad"); return; }
+    var done = function () { toast(okMsg || "コピーしました", "ok"); };
+    var fallback = function () {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      if (ok) done(); else toast("コピーできませんでした。手動で選択してください", "bad");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done)["catch"](fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  $("#specCopy").addEventListener("click", function () {
+    var v = $("#specPrompt").value.trim();
+    if (!v) { $("#specPrompt").value = buildSpecPrompt(); v = $("#specPrompt").value; }
+    copyText(v, "プロンプトをコピーしました");
+  });
+
+  /* ==========================================================
+     REST API / Webhook シミュレータ
+     ========================================================== */
+  function maskify(v) {
+    if (!v) return "(未設定)";
+    if (v.length <= 8) return v.slice(0, 2) + "••••";
+    return v.slice(0, 6) + "••••••••" + v.slice(-4);
+  }
+
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-mask-toggle]");
+    if (!btn) return;
+    var input = document.getElementById(btn.getAttribute("data-mask-toggle"));
+    if (!input) return;
+    var show = input.type === "password";
+    input.type = show ? "text" : "password";
+    btn.textContent = show ? "隠す" : "表示";
+    btn.setAttribute("aria-pressed", show ? "true" : "false");
+  });
+
+  $("#apiFormat").addEventListener("click", function () {
+    var ta = $("#apiBody");
+    try {
+      ta.value = JSON.stringify(JSON.parse(ta.value), null, 2);
+      toast("JSONを整形しました", "ok");
+    } catch (e) {
+      toast("JSONの構文エラー: " + e.message, "bad");
+      log("error", "リクエストボディのJSON構文エラー: " + e.message);
+    }
+  });
+
+  $("#apiCurl").addEventListener("click", function () {
+    var method = $("#apiMethod").value;
+    var url = $("#apiUrl").value.trim();
+    var token = $("#apiToken").value.trim();
+    var body = $("#apiBody").value.trim();
+    var lines = ["curl -X " + method + " \\", "  '" + url + "' \\",
+      "  -H 'Content-Type: application/json' \\"];
+    if (token) lines.push("  -H 'Authorization: Bearer " + maskify(token) + "' \\");
+    if (method !== "GET" && body) lines.push("  -d '" + body.replace(/\s*\n\s*/g, " ") + "'");
+    else lines[lines.length - 1] = lines[lines.length - 1].replace(/ \\$/, "");
+    var out = lines.join("\n");
+    $("#apiOut").textContent = out + "\n\n※ Authorization ヘッダはマスク表示です。実行時は実トークンに差し替えてください。";
+    log("info", "curl形式のリクエストを出力しました（トークンはマスク）。");
+  });
+
+  $("#apiForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (state.emergency) { toast("緊急停止中は送信できません", "bad"); return; }
+
+    var method = $("#apiMethod").value;
+    var mode = $("#apiMode").value;
+    var url = $("#apiUrl").value.trim();
+    var token = $("#apiToken").value.trim();
+    var raw = $("#apiBody").value.trim();
+    var badge = $("#apiBadge");
+
+    if (!url) {
+      badge.className = "badge badge-bad";
+      badge.innerHTML = '<span class="dot"></span>URL未入力';
+      $("#apiOut").textContent = "エラー: エンドポイントURLが空です。";
+      log("error", "送信テスト失敗: URLが未入力です。");
+      return;
+    }
+
+    var parsed = null;
+    if (method !== "GET" && raw) {
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        badge.className = "badge badge-bad";
+        badge.innerHTML = '<span class="dot"></span>400 Bad Request';
+        $("#apiOut").textContent =
+          "HTTP/1.1 400 Bad Request（ローカル検証）\n\n{\n  \"error\": \"invalid_json\",\n  \"detail\": " +
+          JSON.stringify(e.message) + "\n}";
+        log("error", "送信テスト失敗: ボディのJSONが不正です（" + e.message + "）。");
+        return;
+      }
+    }
+
+    badge.className = "badge badge-run";
+    badge.innerHTML = '<span class="dot"></span>送信中';
+    $("#apiOut").textContent = "リクエストを検証中…";
+    log("info", "送信テスト: " + method + " " + maskify(url) + "（" + (mode === "webhook" ? "Webhook" : "REST API") + "）");
+
+    setTimeout(function () {
+      var reqId = "req_" + Math.random().toString(36).slice(2, 10);
+      var latency = Math.round(30 + Math.random() * 240);
+      var accepted = {
+        status: mode === "webhook" ? 202 : 200,
+        statusText: mode === "webhook" ? "Accepted" : "OK",
+        body: {
+          ok: true,
+          request_id: reqId,
+          received: {
+            method: method,
+            endpoint: maskify(url),
+            auth: token ? "Bearer " + maskify(token) : "none",
+            signature: mode === "webhook" ? "sha256=" + maskify(reqId + (token || "unsigned")) : undefined
+          },
+          payload: parsed,
+          note: "これはローカルシミュレーションです。実際のネットワーク送信は行われていません。",
+          latency_ms: latency
+        }
+      };
+      $("#apiOut").textContent =
+        "HTTP/1.1 " + accepted.status + " " + accepted.statusText + "（ローカルシミュレーション）\n" +
+        "x-request-id: " + reqId + "\n" +
+        "x-simulated: true\n\n" +
+        JSON.stringify(accepted.body, null, 2);
+
+      badge.className = "badge badge-ok";
+      badge.innerHTML = '<span class="dot"></span>' + accepted.status + " " + accepted.statusText;
+      state.api.lastStatus = accepted.status;
+      log("ok", "送信テスト成功: " + accepted.status + " " + accepted.statusText + " / " + latency + "ms（" + reqId + "）");
+
+      // コマンド形式のペイロードならタスクへ反映する
+      if (parsed && parsed.command === "/task" && parsed.action === "run" && parsed.target) {
+        var t = findTask(parsed.target);
+        if (t) { startTask(t, "API経由の実行要求"); toast("APIリクエストからタスクを開始しました", "ok"); }
+        else log("warn", "指定されたタスクIDが見つかりません: " + parsed.target);
+      }
+    }, 520);
+  });
+
+  /* ==========================================================
+     設定・セキュリティ
+     ========================================================== */
+  function syncSettingsInputs() {
+    $("#setPin").value = state.settings.pin;
+    $("#setPoll").value = state.settings.poll;
+    $("#apiUrl").value = state.settings.apiUrl;
+    $("#apiToken").value = state.settings.apiToken;
+    $("#specTimeout").value = state.settings.specTimeout;
+  }
+
+  var resTimer = null;
+  function restartResTimer() {
+    clearInterval(resTimer);
+    resTimer = setInterval(tickResources, clamp(state.settings.poll, 500, 10000));
+  }
+
+  $("#saveSettings").addEventListener("click", function () {
+    var pin = $("#setPin").value.trim();
+    if (pin && !/^\d{4,8}$/.test(pin)) {
+      toast("PINは4〜8桁の数字で入力してください", "bad");
+      return;
+    }
+    state.settings.pin = pin;
+    state.settings.poll = clamp(parseInt($("#setPoll").value, 10) || 2000, 500, 10000);
+    state.settings.apiUrl = $("#apiUrl").value.trim();
+    state.settings.apiToken = $("#apiToken").value.trim();
+    state.settings.specTimeout = clamp(parseInt($("#specTimeout").value, 10) || 45, 5, 600);
+    syncSettingsInputs();
+    restartResTimer();
+    if (persist()) {
+      log("ok", "設定を LocalStorage に保存しました（更新間隔 " + state.settings.poll + "ms）。");
+      toast("設定を保存しました", "ok");
+    }
+  });
+
+  $("#exportSettings").addEventListener("click", function () {
+    var view = {
+      pin: state.settings.pin ? maskify(state.settings.pin) : "(未設定)",
+      poll_ms: state.settings.poll,
+      api_url: maskify(state.settings.apiUrl),
+      api_token: state.settings.apiToken ? maskify(state.settings.apiToken) : "(未設定)",
+      spec_timeout_s: state.settings.specTimeout,
+      theme: state.theme,
+      storage_key: LS_KEY
+    };
+    $("#apiOut").textContent = "// 現在の設定（機密値はマスク表示）\n" + JSON.stringify(view, null, 2);
+    log("info", "設定内容を出力しました（機密値はマスク）。");
+    toast("レスポンス欄に設定を表示しました");
+  });
+
+  $("#clearAll").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) { /* 保存不可環境では無視 */ }
+    state.settings = { pin: "", poll: 2000, apiUrl: "http://127.0.0.1:8787/nevi/command", apiToken: "", specTimeout: 45 };
+    state.unlocked = false;
+    syncSettingsInputs();
+    restartResTimer();
+    log("warn", "LocalStorage の保存データをすべて消去しました。");
+    toast("保存データを全消去しました", "bad");
+    showGate();
+  });
+
+  /* ==========================================================
+     ログ操作
+     ========================================================== */
+  $("#logFilter").addEventListener("change", renderLog);
+  $("#logClear").addEventListener("click", function () {
+    state.events = [];
+    renderLog();
+    persist();
+    toast("ログをクリアしました");
+  });
+  $("#logCopy").addEventListener("click", function () {
+    var text = state.events.map(function (e) { return "[" + e.t + "] " + LV_LABEL[e.lv] + " " + e.msg; }).join("\n");
+    copyText(text, "ログをコピーしました");
+  });
+  $("#logAuto").addEventListener("click", function () {
+    logAutoScroll = !logAutoScroll;
+    this.textContent = "自動追尾: " + (logAutoScroll ? "ON" : "OFF");
+    this.setAttribute("aria-pressed", logAutoScroll ? "true" : "false");
+  });
+
+  /* ==========================================================
+     時計・稼働時間
+     ========================================================== */
+  function tickClock() {
+    var now = new Date();
+    $("#clock").textContent = ymd(now) + " " + hhmmss(now);
+    var s = Math.floor((Date.now() - state.booted) / 1000);
+    $("#uptime").textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+  }
+
+  /* ==========================================================
+     起動
+     ========================================================== */
+  function boot() {
+    applyTheme();
+    syncSettingsInputs();
+
+    for (var i = 0; i < 30; i++) state.cpuHist.push(clamp(20 + Math.random() * 22, 4, 97));
+
+    renderResources();
+    renderTasks();
+    renderHistory();
+    renderMcp();
+    renderCal();
+    renderSpec();
+    renderLog();
+
+    if (!state.events.length) {
+      log("info", "Nevi Web Center を起動しました（完全ローカル動作・外部通信なし）。");
+      log("info", "監視対象: PCリソース / /task 自動化 / Googleカレンダー / MCP接続 / /spec 応答。");
+      log("warn", "MCPサーバ obsidian は切断状態です。接続が必要な場合はトグルをONにしてください。");
+    }
+
+    tickClock();
+    setInterval(tickClock, 1000);
+    restartResTimer();
+    tickResources();
+
+    // 実行中タスクの進行を再開
+    state.tasks.forEach(function (t) {
+      if (t.status === "running") { t.status = "idle"; t.progress = 0; startTask(t, "起動時の自動実行"); }
+    });
+
+    if (state.unlocked && state.settings.pin) hideGate();
+    else if (state.unlocked && !state.settings.pin) hideGate();
+    else showGate();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
